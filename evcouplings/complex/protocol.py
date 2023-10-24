@@ -619,7 +619,7 @@ def inter_species(**kwargs):
         species_1 = most_similar_species_1.rename(columns={"species": "species_1"})
         species_2 =  most_similar_species_2.rename(columns={"species": "species_2"})
         # merge columns for id_values
-        pairs = pd.merge(pairs, species_1, on="species_1", how="left")
+        pairs = pd.merge(pairs, species_1, on="species_1", how="left", suffixes=("_1", "_2"))
         pairs = pd.merge(pairs, species_2, on="species_2", how="left", suffixes=("_1", "_2"))
         return pairs
 
