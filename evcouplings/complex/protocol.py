@@ -11,8 +11,6 @@ Authors:
 from collections import Counter
 import numpy as np
 import pandas as pd
-# TODO remove
-import json
 
 from evcouplings.couplings.mapping import Segment
 
@@ -620,8 +618,8 @@ def inter_species(**kwargs):
         # rename column as preparation
         species_1 = most_similar_species_1.rename(columns={"species": "species_1"})
         species_2 =  most_similar_species_2.rename(columns={"species": "species_2"})
-        # merge columns for id_values
-        pairs = pd.merge(pairs, species_1, on="species_1", how="left", suffixes=("_1", "_2"))
+        # merge columns for by species to get alignment ids
+        pairs = pd.merge(pairs, species_1, on="species_1", how="left")
         pairs = pd.merge(pairs, species_2, on="species_2", how="left", suffixes=("_1", "_2"))
         return pairs
 
@@ -648,10 +646,6 @@ def inter_species(**kwargs):
     species_intersection = _get_concat_pairs(kwargs["species_species_file"],
                                              most_similar_in_species_1,
                                              most_similar_in_species_2)
-    # TODO remove
-    with open("/home/centos/EVcouplings/test_inter_species/kwargs_inter_species.txt", "w") as f:
-        json.dump(kwargs,f)
-    species_intersection.to_csv(prefix + "mapping_tmp.csv")
 
     # write concatenated alignment with distance filtering
     # TODO: save monomer alignments?
