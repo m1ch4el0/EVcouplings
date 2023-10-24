@@ -242,8 +242,12 @@ concatenate:
     # genome_distance: pair sequences that are closest neighbors on the genome
     # best_hit: for each genome, pair the sequences that have the highest % identity to the target sequence
     # for best hit protocol, user can set use_best_reciprocal to take the best reciprocal hits only (recommended)
+    # inter_species: for each genome, pair the sequences that have the highest % identity to the target sequence
+    # for inter_species protocol, user should define a path for the species-species file for truthful
+    # concatenation TODO
     protocol: best_hit
     use_best_reciprocal: true
+    # species_species_file: <path_to_species_species_file>
     
     # Maximum genome distance in bases allowed between pairs
     # Required for genome_distance protocol only

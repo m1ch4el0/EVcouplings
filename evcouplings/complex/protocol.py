@@ -90,6 +90,45 @@ def _run_describe_concatenation(outcfg, **kwargs):
     return outcfg
 
 
+def load_monomer_info(annotations_file, identities_file,
+                           target_sequence, alignment_file,
+                           use_best_reciprocal, identity_threshold):
+    """_summary_
+    # TODO
+    Args:
+        annotations_file (_type_): _description_
+        identities_file (_type_): _description_
+        target_sequence (_type_): _description_
+        alignment_file (_type_): _description_
+        use_best_reciprocal (_type_): _description_
+        identity_threshold (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
+
+    # read in annotation to a file and rename the appropriate column
+    annotation_table = read_species_annotation_table(annotations_file)
+
+    # read identity file
+    similarities = pd.read_csv(identities_file)
+
+    # create a pd.DataFrame containing the best hit in each organism
+    most_similar_in_species = most_similar_by_organism(similarities, annotation_table)
+
+    if use_best_reciprocal:
+        paralogs = find_paralogs(
+            target_sequence, annotation_table, similarities,
+            identity_threshold
+        )
+
+        most_similar_in_species = filter_best_reciprocal(
+            alignment_file, paralogs, most_similar_in_species
+        )
+
+    return most_similar_in_species
+
+
 def describe_concatenation(annotation_file_1, annotation_file_2,
                            genome_location_filename_1, genome_location_filename_2,
                            outfile):
@@ -523,13 +562,152 @@ def best_hit(**kwargs):
     return outcfg
 
 
+def inter_species(**kwargs):
+    """
+    Protocol:
+    TODO
+
+    Raises:
+        InvalidParameterError: _description_
+
+    Returns:
+        _type_: _description_
+    """
+    check_required(
+        kwargs,
+        [
+            "prefix",
+            "first_alignment_file", "second_alignment_file",
+            "first_focus_sequence", "second_focus_sequence",
+            "first_focus_mode", "second_focus_mode",
+            "first_segments", "second_segments",
+            "first_identities_file", "second_identities_file",
+            "first_annotation_file", "second_annotation_file",
+            "species_species_file",
+            "use_best_reciprocal", "paralog_identity_threshold"
+        ]
+    )
+
+    prefix = kwargs["prefix"]
+
+    # make sure input alignments
+    verify_resources(
+        "Input alignment does not exist",
+        kwargs["first_alignment_file"], kwargs["second_alignment_file"]
+    )
+
+    # make sure output directory exists
+    create_prefix_folders(prefix)
+
+    def _get_concat_pairs(species_pairs: str, most_similar_species_1: pd.DataFrame,
+                 most_similar_species_2: pd.DataFrame) -> pd.DataFrame:
+        """_summary_
+        # TODO
+        Args:
+            species_pairs (str): _description_
+            most_similar_species_1 (pd.DataFrame): _description_
+            most_similar_species_2 (pd.DataFrame): _description_
+
+        Returns:
+            pd.DataFrame: _description_
+        """
+        # read species pairs
+        pairs = pd.read_csv(species_pairs, sep=',', names=['species_1', 'species_2'], header=None, dtype=str)
+        # TODO add both directions: species a <-> species b 
+        # pairs = pd.concat(pairs, pairs.rename(columns={"species_2": 'species_1', "species_1": 'species_2'}))
+        # rename column as preparation
+        species_1 = most_similar_species_1.rename(columns={"species": "species_1"})
+        species_2 =  most_similar_species_2.rename(columns={"species": "species_2"})
+        # merge columns for id_values
+        pairs = pd.merge(pairs, species_1, on="species_1", how="left")
+        pairs = pd.merge(pairs, species_2, on="species_2", how="left", suffixes=("_1", "_2"))
+        return pairs
+
+    # load the information about each monomer alignment
+    most_similar_in_species_1 = load_monomer_info(
+        kwargs["first_annotation_file"],
+        kwargs["first_identities_file"],
+        kwargs["first_focus_sequence"],
+        kwargs["first_alignment_file"],
+        kwargs["use_best_reciprocal"],
+        kwargs["paralog_identity_threshold"]
+    )
+
+    most_similar_in_species_2 = load_monomer_info(
+        kwargs["second_annotation_file"],
+        kwargs["second_identities_file"],
+        kwargs["second_focus_sequence"],
+        kwargs["second_alignment_file"],
+        kwargs["use_best_reciprocal"],
+        kwargs["paralog_identity_threshold"]
+    )
+
+    # get all id pairs for concatenation defined by species-species file
+    species_intersection = _get_concat_pairs(kwargs["species_species_file"],
+                                             most_similar_in_species_1,
+                                             most_similar_in_species_2)
+
+    # write concatenated alignment with distance filtering
+    # TODO: save monomer alignments?
+    target_seq_id, target_seq_index, raw_ali, mon_ali_1, mon_ali_2 = \
+        write_concatenated_alignment(
+            species_intersection,
+            kwargs["first_alignment_file"],
+            kwargs["second_alignment_file"],
+            kwargs["first_focus_sequence"],
+            kwargs["second_focus_sequence"]
+        )
+
+    # save the alignment files
+    raw_alignment_file = prefix + "_raw.fasta"
+    with open(raw_alignment_file, "w") as of:
+        raw_ali.write(of)
+
+    mon_alignment_file_1 = prefix + "_monomer_1.fasta"
+    with open(mon_alignment_file_1, "w") as of:
+        mon_ali_1.write(of)
+
+    mon_alignment_file_2 = prefix + "_monomer_2.fasta"
+    with open(mon_alignment_file_2, "w") as of:
+        mon_ali_2.write(of)
+
+    aln_outcfg, _ = modify_alignment(
+        raw_ali,
+        target_seq_index,
+        target_seq_id,
+        kwargs["first_region_start"],
+        **kwargs
+    )
+
+    # make sure we return all the necessary information:
+    # * alignment_file: final concatenated alignment that will go into plmc
+    # * focus_sequence: this is the identifier of the concatenated target
+    #   sequence which will be passed into plmc with -f
+    outcfg = aln_outcfg
+    outcfg["raw_alignment_file"] = raw_alignment_file
+    outcfg["first_concatenated_monomer_alignment_file"] = mon_alignment_file_1
+    outcfg["second_concatenated_monomer_alignment_file"] = mon_alignment_file_2
+    outcfg["focus_sequence"] = target_seq_id
+
+    # Update the segments
+    outcfg = modify_complex_segments(outcfg, **kwargs)
+
+    # Describe the statistics of the concatenation
+    outcfg = _run_describe_concatenation(outcfg, **kwargs)
+
+    return outcfg
+
+
 # list of available EC inference protocols
 PROTOCOLS = {
     # concatenate based on genomic distance ("operon-based")
     "genome_distance": genome_distance,
 
     # concatenate based on best hit per genome ("species")
-    "best_hit": best_hit
+    "best_hit": best_hit,
+
+    # concatenate based on best hit per genome ("species-species")
+    "inter_species": inter_species 
 }
 
 
