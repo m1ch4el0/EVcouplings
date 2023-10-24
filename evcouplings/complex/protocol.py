@@ -646,6 +646,8 @@ def inter_species(**kwargs):
     species_intersection = _get_concat_pairs(kwargs["species_species_file"],
                                              most_similar_in_species_1,
                                              most_similar_in_species_2)
+    # TODO remove
+    species_intersection.to_csv(prefix + "mapping_tmp.csv")
 
     # write concatenated alignment with distance filtering
     # TODO: save monomer alignments?
