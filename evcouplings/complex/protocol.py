@@ -11,6 +11,8 @@ Authors:
 from collections import Counter
 import numpy as np
 import pandas as pd
+# TODO remove
+import json
 
 from evcouplings.couplings.mapping import Segment
 
@@ -647,6 +649,8 @@ def inter_species(**kwargs):
                                              most_similar_in_species_1,
                                              most_similar_in_species_2)
     # TODO remove
+    with open("../../../kwargs_inter.txt", "w") as f:
+        f.write(json.dumps(kwargs))
     species_intersection.to_csv(prefix + "mapping_tmp.csv")
 
     # write concatenated alignment with distance filtering
