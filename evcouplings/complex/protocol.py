@@ -649,8 +649,8 @@ def inter_species(**kwargs):
                                              most_similar_in_species_1,
                                              most_similar_in_species_2)
     # TODO remove
-    with open("../../../kwargs_inter.txt", "w") as f:
-        f.write(json.dumps(kwargs))
+    with open("/home/centos/EVcouplings/test_inter_species/kwargs_inter_species.txt", "w") as f:
+        json.dump(kwargs,f)
     species_intersection.to_csv(prefix + "mapping_tmp.csv")
 
     # write concatenated alignment with distance filtering
