@@ -254,7 +254,7 @@ def describe_concatenation(
 
 def save_alignment_files(
     prefix: str, raw_ali: Alignment, mon_ali_1: Alignment, mon_ali_2: Alignment
-):
+) -> dict:
     """
     Writes alignments to files
 
