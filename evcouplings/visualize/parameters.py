@@ -10,9 +10,14 @@ import numpy as np
 from evcouplings.couplings.pairs import add_mixture_probability
 
 
-def evzoom_data(model, ec_threshold=0.9, freq_threshold=0.01,
-                Jij_threshold=10, score="cn",
-                reorder=None):
+def evzoom_data(
+    model,
+    ec_threshold=0.9,
+    freq_threshold=0.01,
+    Jij_threshold=10,
+    score="cn",
+    reorder=None,
+):
     """
     Generate data for EVzoom visualization. Use evzoom_json()
     to get final JSON string to use with EVzoom.
@@ -61,7 +66,7 @@ def evzoom_data(model, ec_threshold=0.9, freq_threshold=0.01,
         ecs = add_mixture_probability(ecs, score=score)
         ecs_sel = ecs.loc[ecs.probability >= ec_threshold]
     else:
-        ecs_sel = ecs.iloc[:int(ec_threshold)]
+        ecs_sel = ecs.iloc[: int(ec_threshold)]
 
     # if cutoff for couplings is given as int, interpret
     # as percentage of biggest absolute coupling value
@@ -71,14 +76,10 @@ def evzoom_data(model, ec_threshold=0.9, freq_threshold=0.01,
 
     if reorder is not None:
         alphabet = np.array(list(reorder))
-        alphabet_order = [
-            model.alphabet_map[c] for c in reorder
-        ]
+        alphabet_order = [model.alphabet_map[c] for c in reorder]
     else:
         alphabet = model.alphabet
-        alphabet_order = sorted(
-            model.alphabet_map.values()
-        )
+        alphabet_order = sorted(model.alphabet_map.values())
 
     # Map containing sequence and indeces
     map_ = {
@@ -92,21 +93,15 @@ def evzoom_data(model, ec_threshold=0.9, freq_threshold=0.01,
     for idx, r in ecs_sel.iterrows():
         i, j, score_ij = r["i"], r["j"], r[score]
         Jij = model.Jij(i, j)[alphabet_order, :][:, alphabet_order]
-        ai_set = np.where(
-            np.max(np.abs(Jij), axis=1) > Jij_threshold
-        )[0]
-        aj_set = np.where(
-            np.max(np.abs(Jij), axis=0) > Jij_threshold
-        )[0]
+        ai_set = np.where(np.max(np.abs(Jij), axis=1) > Jij_threshold)[0]
+        aj_set = np.where(np.max(np.abs(Jij), axis=0) > Jij_threshold)[0]
 
         cur_matrix = [
-            [round(Jij[ai, aj], DIGITS) for aj in list(aj_set)]
-            for ai in list(ai_set)
+            [round(Jij[ai, aj], DIGITS) for aj in list(aj_set)] for ai in list(ai_set)
         ]
 
         cur_matrix_T = [
-            [round(Jij[ai, aj], DIGITS) for ai in list(ai_set)]
-            for aj in list(aj_set)
+            [round(Jij[ai, aj], DIGITS) for ai in list(ai_set)] for aj in list(aj_set)
         ]
 
         cur_row = {
@@ -134,7 +129,7 @@ def evzoom_data(model, ec_threshold=0.9, freq_threshold=0.01,
     fi = model.fi()
     q = model.num_symbols
 
-    B = -fi * np.log2(fi)
+    B = -fi * np.log2(fi, where=fi > 0)
     B[fi <= 0] = 0
     R = np.log2(q) - B.sum(axis=1)
 
@@ -146,10 +141,12 @@ def evzoom_data(model, ec_threshold=0.9, freq_threshold=0.01,
         symbols = model.alphabet[frequent]
         fi_row = fi[i, frequent] * R[i]
 
-        logo.append([
-            {"code": s, "bits": round(float(h), DIGITS_LOGO)}
-            for s, h in zip(symbols, fi_row)
-        ])
+        logo.append(
+            [
+                {"code": s, "bits": round(float(h), DIGITS_LOGO)}
+                for s, h in zip(symbols, fi_row)
+            ]
+        )
 
     return map_, logo, matrix
 
