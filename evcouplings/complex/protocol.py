@@ -87,13 +87,13 @@ def _run_describe_concatenation(outcfg, **kwargs):
 
 
 def load_monomer_info(
-    annotations_file,
-    identities_file,
-    target_sequence,
-    alignment_file,
-    use_best_reciprocal,
-    identity_threshold,
-):
+    annotations_file: str,
+    identities_file: str,
+    target_sequence: str,
+    alignment_file: str,
+    use_best_reciprocal: bool,
+    identity_threshold: float,
+) -> pd.DataFrame:
     """
     Returns the most similar sequence to target for each species
     # TODO maybe replace parameter with kwargs
@@ -102,8 +102,8 @@ def load_monomer_info(
         identities_file (str): path to identity file
         target_sequence (str): target sequence identifier
         alignment_file (str): path to alignment file
-        use_best_reciprocal (boolean): if true use also best reciprocal
-        identity_threshold (TODO): identity cutoff for similarity
+        use_best_reciprocal (bool): if true use also best reciprocal
+        identity_threshold (float): identity cutoff for similarity
 
     Returns:
         pd.DataFrame: Most similar sequences for monomer
@@ -675,14 +675,21 @@ def inter_species(**kwargs):
             dtype=str,
         )
         # TODO add both directions: species a <-> species b
-        # pairs = pd.concat(pairs, pairs.rename(columns={"species_2": 'species_1', "species_1": 'species_2'}))
+        pairs = pd.concat(
+            [
+                pairs,
+                pairs.rename(
+                    columns={"species_2": "species_1", "species_1": "species_2"}
+                ),
+            ]
+        )
         # rename column as preparation
         species_1 = most_similar_species_1.rename(columns={"species": "species_1"})
         species_2 = most_similar_species_2.rename(columns={"species": "species_2"})
         # merge columns for by species to get alignment ids
-        pairs = pd.merge(pairs, species_1, on="species_1", how="left")
+        pairs = pd.merge(pairs, species_1, on="species_1", how="inner")
         pairs = pd.merge(
-            pairs, species_2, on="species_2", how="left", suffixes=("_1", "_2")
+            pairs, species_2, on="species_2", how="inner", suffixes=("_1", "_2")
         )
         return pairs
 
@@ -703,6 +710,11 @@ def inter_species(**kwargs):
         kwargs["second_alignment_file"],
         kwargs["use_best_reciprocal"],
         kwargs["paralog_identity_threshold"],
+    )
+
+    # TODO For testing remove afterwards
+    most_similar_in_species_1.to_csv(
+        prefix + "monomer_info_" + str(kwargs["use_best_reciprocal"]) + ".csv"
     )
 
     # get all id pairs for concatenation defined by species-species file
