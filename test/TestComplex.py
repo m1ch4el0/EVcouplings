@@ -147,7 +147,8 @@ class TestComplex(TestCase):
         temporary_incfg["paralog_identity_threshold"] = 0.9
 
         with open("{}/concatenate/test_new_best_hit_concatenate.outcfg".format(TRAVIS_PATH)) as inf:
-            _outcfg = yaml.safe_load(inf)
+            yaml = YAML(typ='safe')
+            _outcfg = yaml.load(inf)
 
         outcfg = best_hit(**temporary_incfg)
 
@@ -197,7 +198,8 @@ class TestComplex(TestCase):
         temporary_incfg["paralog_identity_threshold"] = 0.9
 
         with open("{}/concatenate/test_new_best_reciprocal_concatenate.outcfg".format(TRAVIS_PATH)) as inf:
-            _outcfg = yaml.safe_load(inf)
+            yaml = YAML(typ='safe')
+            _outcfg = yaml.load(inf)
 
         outcfg = best_hit(**temporary_incfg)
 
@@ -404,7 +406,7 @@ class TestComplex(TestCase):
 
         pd.testing.assert_frame_equal(
             self.possible_partners, _possible_partners,
-            check_less_precise=True, check_like=True,
+            check_exact=False, check_like=True,
             check_names=False
         )
 
