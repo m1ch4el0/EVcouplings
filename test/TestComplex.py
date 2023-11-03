@@ -3,6 +3,7 @@ Test cases for concatenation stage of EVCouplings complex pipeline
 
 Author:
     Anna G. Green
+    Michael Mederer
 """
 
 import unittest
@@ -305,25 +306,15 @@ class TestComplex(TestCase):
     def test_inter_species(self):
         """
         tests the inter-species concatenation protocol.
-        Verifies that all of the outfiles are created and non-empty (but does
+        Verifies that all of the output files are created and non-empty (but does
         not check their contents).
         Verifies that the output configuration has all of the necessary keys
         """
 
         tmp_prefix = "tmp_"
 
-        # loading input parameters for inter-species concatenation
-        with open(
-            "{}/concatenate/test_concatenate.incfg".format(TRAVIS_PATH_ADDITIONAL)
-        ) as inf:
-            yaml = YAML(typ="safe")
-            incfg = yaml.load(inf)
-
-        # TODO self.incfg
         temporary_incfg = deepcopy(self.incfg)
         temporary_incfg["prefix"] = tmp_prefix
-        temporary_incfg["first_focus_sequence"] = incfg["first_focus_sequence"]
-        temporary_incfg["second_focus_sequence"] = incfg["second_focus_sequence"]
         temporary_incfg["first_alignment_file"] = "{}/align_1/test.a2m".format(
             TRAVIS_PATH_ADDITIONAL
         )
@@ -353,6 +344,15 @@ class TestComplex(TestCase):
         ] = "{}/species_mapping_flipped.csv".format(TRAVIS_PATH_ADDITIONAL)
         temporary_incfg["use_best_reciprocal"] = True
         temporary_incfg["paralog_identity_threshold"] = 0.95
+        # loading input parameters for inter-species concatenation
+        with open(
+            "{}/concatenate/test_concatenate.incfg".format(TRAVIS_PATH_ADDITIONAL)
+        ) as inf:
+            yaml = YAML(typ="safe")
+            incfg = yaml.load(inf)
+        # overwriting old parameters
+        temporary_incfg["first_focus_sequence"] = incfg["first_focus_sequence"]
+        temporary_incfg["second_focus_sequence"] = incfg["second_focus_sequence"]
 
         with open(
             "{}/concatenate/test_concatenate.outcfg".format(TRAVIS_PATH_ADDITIONAL)
@@ -386,15 +386,16 @@ class TestComplex(TestCase):
 
     def test_load_monomer_info_normal(self):
         """
-        TODO
+        Tests if load_monomer_info returns the same correct output for
+        one test dataset (use_best_reciprocal=false).
         """
+        # load input config
         with open(
             "{}/concatenate/test_concatenate.incfg".format(TRAVIS_PATH_ADDITIONAL)
         ) as inf:
             yaml = YAML(typ="safe")
             incfg = yaml.load(inf)
-
-        # TODO check file names
+        # define additionally needed parameter
         annotation_file = "{}/align_1/test_annotation.csv".format(
             TRAVIS_PATH_ADDITIONAL
         )
@@ -405,7 +406,7 @@ class TestComplex(TestCase):
         use_best_reciprocal = False
         identity_threshold = 0.95
 
-        # TODO load output from file
+        # load correct output from file
         _outdf = pd.read_csv(
             "{}/test_monomer_info_False.csv".format(TRAVIS_PATH_ADDITIONAL), index_col=0
         )
@@ -423,15 +424,16 @@ class TestComplex(TestCase):
 
     def test_load_monomer_info_reciprocal(self):
         """
-        TODO
+        Tests if load_monomer_info returns the same correct output for
+        one test dataset (use_best_reciprocal=true).
         """
+        # load input config
         with open(
             "{}/concatenate/test_concatenate.incfg".format(TRAVIS_PATH_ADDITIONAL)
         ) as inf:
             yaml = YAML(typ="safe")
             incfg = yaml.load(inf)
-
-        # TODO check file names
+        # define additionally needed parameter
         annotation_file = "{}/align_1/test_annotation.csv".format(
             TRAVIS_PATH_ADDITIONAL
         )
@@ -442,9 +444,9 @@ class TestComplex(TestCase):
         use_best_reciprocal = True
         identity_threshold = 0.95
 
-        # TODO load output from file
+        # load correct output from file
         _outdf = pd.read_csv(
-            "{}/test_monomer_info_True.csv".format(TRAVIS_PATH_ADDITIONAL, index_col=0)
+            "{}/test_monomer_info_True.csv".format(TRAVIS_PATH_ADDITIONAL), index_col=0
         )
 
         outdf = load_monomer_info(
