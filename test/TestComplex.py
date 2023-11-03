@@ -312,9 +312,18 @@ class TestComplex(TestCase):
 
         tmp_prefix = "tmp_"
 
+        # loading input parameters for inter-species concatenation
+        with open(
+            "{}/concatenate/test_concatenate.incfg".format(TRAVIS_PATH_ADDITIONAL)
+        ) as inf:
+            yaml = YAML(typ="safe")
+            incfg = yaml.load(inf)
+
         # TODO self.incfg
         temporary_incfg = deepcopy(self.incfg)
         temporary_incfg["prefix"] = tmp_prefix
+        temporary_incfg["first_focus_sequence"] = incfg["first_focus_sequence"]
+        temporary_incfg["second_focus_sequence"] = incfg["second_focus_sequence"]
         temporary_incfg["first_alignment_file"] = "{}/align_1/test.a2m".format(
             TRAVIS_PATH_ADDITIONAL
         )
@@ -398,7 +407,7 @@ class TestComplex(TestCase):
 
         # TODO load output from file
         _outdf = pd.read_csv(
-            "{}/test_monomer_info_False.csv".format(TRAVIS_PATH_ADDITIONAL)
+            "{}/test_monomer_info_False.csv".format(TRAVIS_PATH_ADDITIONAL), index_col=0
         )
 
         outdf = load_monomer_info(
@@ -435,7 +444,7 @@ class TestComplex(TestCase):
 
         # TODO load output from file
         _outdf = pd.read_csv(
-            "{}/test_monomer_info_True.csv".format(TRAVIS_PATH_ADDITIONAL)
+            "{}/test_monomer_info_True.csv".format(TRAVIS_PATH_ADDITIONAL, index_col=0)
         )
 
         outdf = load_monomer_info(
