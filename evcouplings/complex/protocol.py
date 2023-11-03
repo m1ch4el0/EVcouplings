@@ -6,6 +6,7 @@ alignment
 Authors:
   Anna G. Green
   Thomas A. Hopf
+  Michael Mederer
 """
 
 from collections import Counter
