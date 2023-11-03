@@ -92,9 +92,7 @@ class TestMutation(TestCase):
         # gotta round to account for this
         _singles = _singles.round(3)
         singles = singles.round(3)
-        pd.testing.assert_frame_equal(
-            singles, _singles, check_exact=False, check_less_precise=True
-        )
+        pd.testing.assert_frame_equal(singles, _singles, check_exact=False)
 
     def test_split_mutants_single(self):
         """

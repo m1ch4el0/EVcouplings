@@ -10,7 +10,7 @@ Authors:
   Thomas A. Hopf
 """
 
-import ruamel.yaml as yaml
+from ruamel.yaml import YAML
 
 
 class MissingParameterError(Exception):
@@ -44,9 +44,11 @@ def parse_config(config_str, preserve_order=False):
     """
     try:
         if preserve_order:
-            return yaml.load(config_str, Loader=yaml.RoundTripLoader)
+            yaml = YAML(typ="base")
+            return yaml.load(config_str)
         else:
-            return yaml.safe_load(config_str)
+            yaml = YAML(typ="safe")
+            return yaml.load(config_str)
     except yaml.parser.ParserError as e:
         raise InvalidParameterError(
             "Could not parse input configuration. "
@@ -90,9 +92,7 @@ def write_config_file(out_filename, config):
         dumper = yaml.Dumper
 
     with open(out_filename, "w") as f:
-        f.write(
-            yaml.dump(config, Dumper=dumper, default_flow_style=False)
-        )
+        f.write(yaml.dump(config, Dumper=dumper, default_flow_style=False))
 
 
 def check_required(params, keys):

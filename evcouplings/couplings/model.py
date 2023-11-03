@@ -100,8 +100,8 @@ def _single_mutant_hamiltonians(target_seq, J_ij, h_i):
             for j in range(L):
                 if i != j:
                     delta_Jij += (
-                        J_ij[i, j, A_i, target_seq[j]] -
-                        J_ij[i, j, target_seq[i], target_seq[j]]
+                        J_ij[i, j, A_i, target_seq[j]]
+                        - J_ij[i, j, target_seq[i], target_seq[j]]
                     )
 
             H[i, A_i] = [delta_Jij + delta_hi, delta_Jij, delta_hi]
@@ -150,8 +150,8 @@ def _delta_hamiltonian(pos, subs, target_seq, J_ij, h_i):
         for j in range(L):
             if i != j:
                 delta_Jij += (
-                    J_ij[i, j, A_i, target_seq[j]] -
-                    J_ij[i, j, target_seq[i], target_seq[j]]
+                    J_ij[i, j, A_i, target_seq[j]]
+                    - J_ij[i, j, target_seq[i], target_seq[j]]
                 )
 
         # correct couplings between substituted positions:
@@ -225,9 +225,7 @@ def _zero_sum_gauge(J_ij, inplace=False):
             # subtract correction terms from each entry
             for a in range(num_symbols):
                 for b in range(num_symbols):
-                    J_ij_0[i, j, a, b] = (
-                        ij_mat[a, b] - avg_a[a] - avg_b[b] + avg_ab
-                    )
+                    J_ij_0[i, j, a, b] = ij_mat[a, b] - avg_a[a] - avg_b[b] + avg_ab
                     J_ij_0[j, i, b, a] = J_ij_0[i, j, a, b]
 
     return J_ij_0
@@ -239,7 +237,9 @@ class CouplingsModel:
     and compute evolutionary couplings, sequence statistical energies, etc.
     """
 
-    def __init__(self, model_file, precision="float32", file_format="plmc_v2", **kwargs):
+    def __init__(
+        self, model_file, precision="float32", file_format="plmc_v2", **kwargs
+    ):
         """
         Initializes the object with raw values read from binary .Jij file
 
@@ -271,20 +271,14 @@ class CouplingsModel:
                     self.__read_plmc_v2(f, precision)
         elif file_format == "plmc_v1":
             if is_file_obj:
-                self.__read_plmc_v1(
-                    model_file, precision, kwargs.get("alphabet", None)
-                )
+                self.__read_plmc_v1(model_file, precision, kwargs.get("alphabet", None))
             else:
                 with open(model_file, "rb") as f:
-                    self.__read_plmc_v1(
-                        f, precision, kwargs.get("alphabet", None)
-                    )
+                    self.__read_plmc_v1(f, precision, kwargs.get("alphabet", None))
         else:
             raise ValueError(
                 "Illegal file format {}, valid options are:"
-                "plmc_v2, plmc_v1".format(
-                    file_format
-                )
+                "plmc_v2, plmc_v1".format(file_format)
             )
 
         self.alphabet_map = {s: i for i, s in enumerate(self.alphabet)}
@@ -294,8 +288,10 @@ class CouplingsModel:
         # that means there is a non-alphabet character in sequence array
         # and therefore there is no focus sequence.
         try:
-            self.target_seq_mapped = np.array([self.alphabet_map[x] for x in self.target_seq])
-            self.has_target_seq = (np.sum(self.target_seq_mapped) > 0)
+            self.target_seq_mapped = np.array(
+                [self.alphabet_map[x] for x in self.target_seq]
+            )
+            self.has_target_seq = np.sum(self.target_seq_mapped) > 0
         except KeyError:
             self.target_seq_mapped = np.zeros((self.L), dtype=np.int32)
             self.has_target_seq = False
@@ -328,63 +324,61 @@ class CouplingsModel:
         """
         # model length, number of symbols, valid/invalid sequences
         # and iterations
-        self.L, self.num_symbols, self.N_valid, self.N_invalid, self.num_iter = (
-            np.fromfile(f, "int32", 5)
-        )
+        (
+            self.L,
+            self.num_symbols,
+            self.N_valid,
+            self.N_invalid,
+            self.num_iter,
+        ) = np.fromfile(f, "int32", 5)
 
         # theta, regularization weights, and effective number of samples
-        self.theta, self.lambda_h, self.lambda_J, self.lambda_group, self.N_eff = (
-            np.fromfile(f, precision, 5)
-        )
+        (
+            self.theta,
+            self.lambda_h,
+            self.lambda_J,
+            self.lambda_group,
+            self.N_eff,
+        ) = np.fromfile(f, precision, 5)
 
         # Read alphabet (make sure we get proper unicode rather than byte string)
-        self.alphabet = np.fromfile(
-            f, "S1", self.num_symbols
-        ).astype("U1")
+        self.alphabet = np.fromfile(f, "S1", self.num_symbols).astype("U1")
 
         # weights of individual sequences (after clustering)
-        self.weights = np.fromfile(
-            f, precision, self.N_valid + self.N_invalid
-        )
+        self.weights = np.fromfile(f, precision, self.N_valid + self.N_invalid)
 
         # target sequence and index mapping, again ensure unicode
         self._target_seq = np.fromfile(f, "S1", self.L).astype("U1")
         self.index_list = np.fromfile(f, "int32", self.L)
 
         # single site frequencies f_i and fields h_i
-        self.f_i, = np.fromfile(
+        (self.f_i,) = np.fromfile(
             f, dtype=(precision, (self.L, self.num_symbols)), count=1
         )
 
-        self.h_i, = np.fromfile(
+        (self.h_i,) = np.fromfile(
             f, dtype=(precision, (self.L, self.num_symbols)), count=1
         )
 
         # pair frequencies f_ij and pair couplings J_ij / J_ij
-        self.f_ij = np.zeros(
-            (self.L, self.L, self.num_symbols, self.num_symbols)
-        )
+        self.f_ij = np.zeros((self.L, self.L, self.num_symbols, self.num_symbols))
 
-        self.J_ij = np.zeros(
-            (self.L, self.L, self.num_symbols, self.num_symbols)
-        )
+        self.J_ij = np.zeros((self.L, self.L, self.num_symbols, self.num_symbols))
 
         # TODO: could read triangle matrix from file in one block
         # like in read_params.m, which would result in faster reading
         # but also 50% higher memory usage... for now save memory
         for i in range(self.L - 1):
             for j in range(i + 1, self.L):
-                self.f_ij[i, j], = np.fromfile(
-                    f, dtype=(precision, (self.num_symbols, self.num_symbols)),
-                    count=1
+                (self.f_ij[i, j],) = np.fromfile(
+                    f, dtype=(precision, (self.num_symbols, self.num_symbols)), count=1
                 )
                 self.f_ij[j, i] = self.f_ij[i, j].T
 
         for i in range(self.L - 1):
             for j in range(i + 1, self.L):
-                self.J_ij[i, j], = np.fromfile(
-                    f, dtype=(precision, (self.num_symbols, self.num_symbols)),
-                    count=1
+                (self.J_ij[i, j],) = np.fromfile(
+                    f, dtype=(precision, (self.num_symbols, self.num_symbols)), count=1
                 )
                 self.J_ij[j, i] = self.J_ij[i, j].T
 
@@ -393,6 +387,7 @@ class CouplingsModel:
         if self.lambda_h < 0:
             # cast model to mean field model
             from evcouplings.couplings.mean_field import MeanFieldCouplingsModel
+
             self.__class__ = MeanFieldCouplingsModel
 
             # handle requirements specific to
@@ -420,8 +415,8 @@ class CouplingsModel:
         ALPHABET_PROTEIN = GAP + ALPHABET_PROTEIN_NOGAP
 
         # model length, number of symbols
-        self.L, = np.fromfile(f, "int32", 1)
-        self.num_symbols, = np.fromfile(f, "int32", 1)
+        (self.L,) = np.fromfile(f, "int32", 1)
+        (self.num_symbols,) = np.fromfile(f, "int32", 1)
 
         # Old format does not have alphabet in file, so need
         # to guess it or use user-supplied alphabet.
@@ -434,9 +429,7 @@ class CouplingsModel:
             else:
                 raise ValueError(
                     "Could not guess default alphabet for "
-                    "{} states, specify alphabet parameter.".format(
-                        self.num_symbols
-                    )
+                    "{} states, specify alphabet parameter.".format(self.num_symbols)
                 )
         else:
             # verify if size of given alphabet matches model
@@ -472,22 +465,18 @@ class CouplingsModel:
         self.weights = None
 
         # single site frequencies f_i and fields h_i
-        self.f_i, = np.fromfile(
+        (self.f_i,) = np.fromfile(
             f, dtype=(precision, (self.L, self.num_symbols)), count=1
         )
 
-        self.h_i, = np.fromfile(
+        (self.h_i,) = np.fromfile(
             f, dtype=(precision, (self.L, self.num_symbols)), count=1
         )
 
         # pair frequencies f_ij and pair couplings J_ij / J_ij
-        self.f_ij = np.zeros(
-            (self.L, self.L, self.num_symbols, self.num_symbols)
-        )
+        self.f_ij = np.zeros((self.L, self.L, self.num_symbols, self.num_symbols))
 
-        self.J_ij = np.zeros(
-            (self.L, self.L, self.num_symbols, self.num_symbols)
-        )
+        self.J_ij = np.zeros((self.L, self.L, self.num_symbols, self.num_symbols))
 
         for i in range(self.L - 1):
             for j in range(i + 1, self.L):
@@ -496,18 +485,18 @@ class CouplingsModel:
                 if i + 1 != file_i or j + 1 != file_j:
                     raise ValueError(
                         "Error: column pair indices inconsistent. "
-                        "Expected: {} {}; File: {} {}".format(i + 1, j + 1, file_i, file_j)
+                        "Expected: {} {}; File: {} {}".format(
+                            i + 1, j + 1, file_i, file_j
+                        )
                     )
 
-                self.f_ij[i, j], = np.fromfile(
-                    f, dtype=(precision, (self.num_symbols, self.num_symbols)),
-                    count=1
+                (self.f_ij[i, j],) = np.fromfile(
+                    f, dtype=(precision, (self.num_symbols, self.num_symbols)), count=1
                 )
                 self.f_ij[j, i] = self.f_ij[i, j].T
 
-                self.J_ij[i, j], = np.fromfile(
-                    f, dtype=(precision, (self.num_symbols, self.num_symbols)),
-                    count=1
+                (self.J_ij[i, j],) = np.fromfile(
+                    f, dtype=(precision, (self.num_symbols, self.num_symbols)), count=1
                 )
                 self.J_ij[j, i] = self.J_ij[i, j].T
 
@@ -544,7 +533,9 @@ class CouplingsModel:
             sequence = list(sequence)
 
         self._target_seq = np.array(sequence)
-        self.target_seq_mapped = np.array([self.alphabet_map[x] for x in self.target_seq])
+        self.target_seq_mapped = np.array(
+            [self.alphabet_map[x] for x in self.target_seq]
+        )
         self.has_target_seq = True
 
     @property
@@ -615,9 +606,7 @@ class CouplingsModel:
             for i, s in enumerate(sequences):
                 S[i] = [self.alphabet_map[x] for x in s]
         except KeyError:
-            raise ValueError(
-                "Invalid symbol in sequence {}: {}".format(i, s)
-            )
+            raise ValueError("Invalid symbol in sequence {}: {}".format(i, s))
 
         return S
 
@@ -689,8 +678,8 @@ class CouplingsModel:
             2) delta J_ij, 3) delta h_i
 
         """
-        pos = np.empty(len(substitutions), dtype=np.int)
-        subs = np.empty(len(substitutions), dtype=np.int)
+        pos = np.empty(len(substitutions), dtype=np.int_)
+        subs = np.empty(len(substitutions), dtype=np.int_)
 
         try:
             for i, (subs_pos, subs_from, subs_to) in enumerate(substitutions):
@@ -709,7 +698,9 @@ class CouplingsModel:
                 )
             )
 
-        return _delta_hamiltonian(pos, subs, self.target_seq_mapped, self.J_ij, self.h_i)
+        return _delta_hamiltonian(
+            pos, subs, self.target_seq_mapped, self.J_ij, self.h_i
+        )
 
     @property
     def double_mut_mat(self):
@@ -728,14 +719,16 @@ class CouplingsModel:
             for i in range(self.L - 1):
                 for j in range(i + 1, self.L):
                     self._double_mut_mat[i, j] = (
-                        np.tile(self.single_mut_mat[i], (self.num_symbols, 1)).T +
-                        np.tile(self.single_mut_mat[j], (self.num_symbols, 1)) +
-                        self.J_ij[i, j] -
-                        np.tile(self.J_ij[i, j, :, seq[j]], (self.num_symbols, 1)).T -
-                        np.tile(self.J_ij[i, j, seq[i], :], (self.num_symbols, 1)) +
+                        np.tile(self.single_mut_mat[i], (self.num_symbols, 1)).T
+                        + np.tile(self.single_mut_mat[j], (self.num_symbols, 1))
+                        + self.J_ij[i, j]
+                        - np.tile(self.J_ij[i, j, :, seq[j]], (self.num_symbols, 1)).T
+                        - np.tile(self.J_ij[i, j, seq[i], :], (self.num_symbols, 1))
+                        +
                         # we are only interested in difference to WT, so normalize
                         # for second couplings subtraction with last term
-                        self.J_ij[i, j, seq[i], seq[j]])
+                        self.J_ij[i, j, seq[i], seq[j]]
+                    )
 
                     self._double_mut_mat[j, i] = self._double_mut_mat[i, j].T
 
@@ -764,9 +757,7 @@ class CouplingsModel:
         col_means = np.mean(matrix, axis=0) * L / (L - 1)
         matrix_mean = np.mean(matrix) * L / (L - 1)
 
-        apc = np.dot(
-            col_means.reshape(L, 1), col_means.reshape(1, L)
-        ) / matrix_mean
+        apc = np.dot(col_means.reshape(L, 1), col_means.reshape(1, L)) / matrix_mean
 
         # subtract APC and blank diagonal entries
         corrected_matrix = matrix - apc
@@ -795,7 +786,9 @@ class CouplingsModel:
                 # mutual information
                 p = self.f_ij[i, j]
                 m = np.dot(self.f_i[i, np.newaxis].T, self.f_i[j, np.newaxis])
-                self._mi_scores_raw[i, j] = np.sum(p[p > 0] * np.log(p[p > 0] / m[p > 0]))
+                self._mi_scores_raw[i, j] = np.sum(
+                    p[p > 0] * np.log(p[p > 0] / m[p > 0])
+                )
                 self._mi_scores_raw[j, i] = self._mi_scores_raw[i, j]
 
         # apply Average Product Correction (Dunn et al., Bioinformatics, 2008)
@@ -814,16 +807,23 @@ class CouplingsModel:
                 except TypeError:
                     seqdist = np.nan
 
-                ecs.append((
-                    self.index_list[i], self.target_seq[i],
-                    self.index_list[j], self.target_seq[j],
-                    seqdist,
-                    self._mi_scores_raw[i, j], self._mi_scores_apc[i, j],
-                    self._fn_scores[i, j], self._cn_scores[i, j]
-                ))
+                ecs.append(
+                    (
+                        self.index_list[i],
+                        self.target_seq[i],
+                        self.index_list[j],
+                        self.target_seq[j],
+                        seqdist,
+                        self._mi_scores_raw[i, j],
+                        self._mi_scores_apc[i, j],
+                        self._fn_scores[i, j],
+                        self._cn_scores[i, j],
+                    )
+                )
 
         self._ecs = pd.DataFrame(
-            ecs, columns=["i", "A_i", "j", "A_j", "seqdist", "mi_raw", "mi_apc", "fn", "cn"]
+            ecs,
+            columns=["i", "A_i", "j", "A_j", "seqdist", "mi_raw", "mi_apc", "fn", "cn"],
         ).sort_values(by="cn", ascending=False)
 
     @property
@@ -897,7 +897,7 @@ class CouplingsModel:
             """
             (fi, lambda_h, N) = args
             logZ = np.log(np.exp(x).sum())
-            return N * (logZ - (fi * x).sum()) + lambda_h * ((x ** 2).sum())
+            return N * (logZ - (fi * x).sum()) + lambda_h * ((x**2).sum())
 
         def _gradient(x, *args):
             """
@@ -913,9 +913,11 @@ class CouplingsModel:
         for i in range(self.L):
             x0 = np.zeros(self.num_symbols)
             h_i[i] = fmin_bfgs(
-                _log_post, x0, _gradient,
+                _log_post,
+                x0,
+                _gradient,
                 args=(self.f_i[i], self.lambda_h, self.N_eff),
-                disp=False
+                disp=False,
             )
 
         c0 = deepcopy(self)
@@ -945,15 +947,13 @@ class CouplingsModel:
             Items mapped into new space
         """
         is_sequence = (
-            isinstance(indices, Iterable) and
-            not isinstance(indices, str) and
-            not isinstance(indices, tuple)
+            isinstance(indices, Iterable)
+            and not isinstance(indices, str)
+            and not isinstance(indices, tuple)
         )
 
         if is_sequence:
-            return np.array(
-                [mapping[i] for i in indices]
-            )
+            return np.array([mapping[i] for i in indices])
         else:
             return mapping[indices]
 
@@ -1215,16 +1215,19 @@ class CouplingsModel:
         with open(out_file, "wb") as f:
             np.array([self.L, self.num_symbols], dtype="int32").tofile(f)
             if new:
-                np.array([self.N_valid,
-                          self.N_invalid,
-                          self.num_iter],
-                         dtype="int32").tofile(f)
-                np.array([self.theta,
-                          self.lambda_h,
-                          self.lambda_J,
-                          self.lambda_group,
-                          self.N_eff],
-                         dtype=precision).tofile(f)
+                np.array(
+                    [self.N_valid, self.N_invalid, self.num_iter], dtype="int32"
+                ).tofile(f)
+                np.array(
+                    [
+                        self.theta,
+                        self.lambda_h,
+                        self.lambda_J,
+                        self.lambda_group,
+                        self.N_eff,
+                    ],
+                    dtype=precision,
+                ).tofile(f)
                 self.alphabet.dtype = "S1"
                 self.alphabet[np.where(self.alphabet != b"")].tofile(f)
                 self.alphabet.dtype = "U1"
@@ -1250,4 +1253,3 @@ class CouplingsModel:
                 for i in range(self.L - 1):
                     for j in range(i + 1, self.L):
                         self.J_ij[i, j].astype(precision).tofile(f)
-
