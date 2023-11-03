@@ -9,7 +9,7 @@ import unittest
 import os
 import tempfile
 import pandas as pd
-import ruamel.yaml as yaml
+from ruamel.yaml import YAML
 from copy import deepcopy
 from unittest import TestCase
 import evcouplings
@@ -17,15 +17,14 @@ from evcouplings.mutate.calculations import *
 from evcouplings.mutate.protocol import *
 from evcouplings.couplings.model import CouplingsModel
 
-TRAVIS_PATH = os.getenv('HOME') + "/evcouplings_test_cases"
+TRAVIS_PATH = os.getenv("HOME") + "/evcouplings_test_cases"
 # TRAVIS_PATH = "/home/travis/evcouplings_test_cases"
-#TRAVIS_PATH = "/Users/AG/Dropbox/evcouplings_dev/test_cases/for_B"
+# TRAVIS_PATH = "/Users/AG/Dropbox/evcouplings_dev/test_cases/for_B"
 MONOMER_PATH = "{}/monomer_test".format(TRAVIS_PATH)
 COMPLEX_PATH = "{}/complex_test".format(TRAVIS_PATH)
 
 
 class TestMutation(TestCase):
-
     def __init__(self, *args, **kwargs):
         super(TestMutation, self).__init__(*args, **kwargs)
 
@@ -43,10 +42,7 @@ class TestMutation(TestCase):
         :return:
         """
         mutation_string = "A143K,M100K"
-        mutation_target = [
-            (143, "A", "K"),
-            (100, "M", "K")
-        ]
+        mutation_target = [(143, "A", "K"), (100, "M", "K")]
         mutations = extract_mutations(mutation_string)
         self.assertEqual(mutations, mutation_target)
 
@@ -89,43 +85,38 @@ class TestMutation(TestCase):
         tests whether single mutant matrix returns the correct pd.DataFrame
         :return:
         """
-        _singles = single_mutant_matrix(
-            self.c, output_column="prediction_epistatic"
-        )
+        _singles = single_mutant_matrix(self.c, output_column="prediction_epistatic")
 
         singles = self.singles.drop("prediction_independent", axis=1)
         # because of reading/writing, the floats have slightly different lengths
         # gotta round to account for this
         _singles = _singles.round(3)
         singles = singles.round(3)
-        pd.testing.assert_frame_equal(singles, _singles, check_exact=False, check_less_precise=True)
+        pd.testing.assert_frame_equal(
+            singles, _singles, check_exact=False, check_less_precise=True
+        )
 
     def test_split_mutants_single(self):
         """
 
         :return:
         """
-        mutations = [
-            "A124K",
-            "M122L",
-            "A156V"
-        ]
+        mutations = ["A124K", "M122L", "A156V"]
 
-        data = pd.DataFrame({
-            "mutations": mutations
-        })
+        data = pd.DataFrame({"mutations": mutations})
 
-        output = pd.DataFrame({
-            "pos": [124, 122, 156],
-            "wt": ["A", "M", "A"],
-            "subs": ["K", "L", "V"],
-            "mutations": mutations,
-            "num_mutations": [1, 1, 1]
-        }, dtype=object)
+        output = pd.DataFrame(
+            {
+                "pos": [124, 122, 156],
+                "wt": ["A", "M", "A"],
+                "subs": ["K", "L", "V"],
+                "mutations": mutations,
+                "num_mutations": [1, 1, 1],
+            },
+            dtype=object,
+        )
 
-        output = output[[
-            "mutations", "num_mutations", "pos", "wt", "subs"
-        ]]
+        output = output[["mutations", "num_mutations", "pos", "wt", "subs"]]
         output["num_mutations"] = output["num_mutations"].astype(int)
         output["pos"] = output["pos"].astype(str)
 
@@ -138,34 +129,28 @@ class TestMutation(TestCase):
 
         :return:
         """
-        mutations = [
-            "A124K,W145Y",
-            "M122L",
-            "A156V"
-        ]
+        mutations = ["A124K,W145Y", "M122L", "A156V"]
 
-        data = pd.DataFrame({
-            "mutations": mutations
-        })
+        data = pd.DataFrame({"mutations": mutations})
 
-        output = pd.DataFrame({
-            "pos": ["124,145", "122", "156"],
-            "wt": ["A,W", "M", "A"],
-            "subs": ["K,Y", "L", "V"],
-            "mutations": mutations,
-            "num_mutations": [2, 1, 1]
-        }, dtype=object)
+        output = pd.DataFrame(
+            {
+                "pos": ["124,145", "122", "156"],
+                "wt": ["A,W", "M", "A"],
+                "subs": ["K,Y", "L", "V"],
+                "mutations": mutations,
+                "num_mutations": [2, 1, 1],
+            },
+            dtype=object,
+        )
 
-        output = output[[
-            "mutations", "num_mutations", "pos", "wt", "subs"
-        ]]
+        output = output[["mutations", "num_mutations", "pos", "wt", "subs"]]
         output["num_mutations"] = output["num_mutations"].astype(int)
         output["pos"] = output["pos"].astype(str)
 
         split_mutations = split_mutants(data, "mutations")
 
         pd.testing.assert_frame_equal(output, split_mutations)
-
 
     # def test_protcol_standard(self):
     #         """
@@ -202,18 +187,22 @@ class TestMutation(TestCase):
     #                     self.assertTrue(os.path.getsize(_file) > 0)
     #                     os.unlink(_file)
 
-class TestMutationComplex(TestCase):
 
+class TestMutationComplex(TestCase):
     def __init__(self, *args, **kwargs):
         super(TestMutationComplex, self).__init__(*args, **kwargs)
 
         self.model_file = "{}/couplings/test_new.model".format(COMPLEX_PATH)
 
-        config = yaml.safe_load(open("{}/couplings/test_new_couplings.outcfg".format(COMPLEX_PATH)))
+        with open("{}/couplings/test_new_couplings.outcfg".format(COMPLEX_PATH)) as inf:
+            yaml = YAML(typ="safe")
+            config = yaml.load(inf)
         first_segment = Segment.from_list(config["segments"][0])
         second_segment = Segment.from_list(config["segments"][1])
 
-        self.c = MultiSegmentCouplingsModel(self.model_file, first_segment, second_segment)
+        self.c = MultiSegmentCouplingsModel(
+            self.model_file, first_segment, second_segment
+        )
         self.c0 = self.c.to_independent_model()
         self.singles = pd.read_csv("{}/mutate/mutant_matrix.csv".format(COMPLEX_PATH))
 
@@ -248,5 +237,5 @@ class TestMutationComplex(TestCase):
         pd.testing.assert_frame_equal(singles, _singles)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
