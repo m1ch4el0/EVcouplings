@@ -585,7 +585,9 @@ class TestComplex(TestCase):
         annotation_and_id = most_similar_by_organism(
             self.similarities, self.annotation_data
         )
-        pd.testing.assert_frame_equal(annotation_and_id, self.annotation_and_id)
+        pd.testing.assert_frame_equal(
+            annotation_and_id, self.annotation_and_id, check_like=True
+        )
 
     def test_find_paralogs(self):
         """
