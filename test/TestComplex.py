@@ -19,7 +19,7 @@ from evcouplings.complex.protocol import *
 from evcouplings.align import Alignment
 
 TRAVIS_PATH = os.getenv("HOME") + "/evcouplings_test_cases/complex_test"
-TRAVIS_PATH_ADDITIONAL = os.getenv("HOME") + "test_cases_inter_species/test_data"
+TRAVIS_PATH_ADDITIONAL = os.getenv("HOME") + "/test_cases_inter_species/test_data"
 # TRAVIS_PATH = "/home/travis/evcouplings_test_cases/complex_test"
 # TRAVIS_PATH = "/Users/AG/Dropbox/evcouplings_dev/test_cases/for_B/complex_test"
 
