@@ -55,7 +55,8 @@ class TestSubmitter(TestCase):
 
         local.submit(c)
         self.assertTrue(local.cancel(c))
-        os.remove(self.test_db)
+        # TODO FileNotFoundError: [Errno 2] No such file or directory: './test/test.db'
+        # os.remove(self.test_db)
 
     # def test_local_dependency(self):
     #     local = SubmitterFactory("local", blocking=True, db_path=self.test_db)
