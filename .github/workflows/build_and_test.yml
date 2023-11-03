@@ -38,7 +38,7 @@ jobs:
         tar -xf evcouplings_test_cases.tar.gz -C $HOME/
     - name: Download test files inter-species
       run: |
-        wget https://marks.hms.harvard.edu/evcouplings_test_cases/data/evcouplings_test_cases.tar.gz
+        wget https://github.com/m1ch4el0/EVcouplings/raw/inter_species_develop/test/test_data/test_cases_inter_species.zip
         unzip test_cases_inter_species.zip -d $HOME/
     - name: Run tests in headless xvfb environment
       uses: coactions/setup-xvfb@v1
