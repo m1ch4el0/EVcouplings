@@ -346,9 +346,7 @@ class TestComplex(TestCase):
         temporary_incfg["paralog_identity_threshold"] = 0.95
 
         with open(
-            "{}/concatenate/test_new_best_reciprocal_concatenate.outcfg".format(
-                TRAVIS_PATH_ADDITIONAL
-            )
+            "{}/concatenate/test_concatenate.outcfg".format(TRAVIS_PATH_ADDITIONAL)
         ) as inf:
             yaml = YAML(typ="safe")
             _outcfg = yaml.load(inf)
