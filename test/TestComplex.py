@@ -379,7 +379,12 @@ class TestComplex(TestCase):
         """
         TODO
         """
-        tmp_prefix = "tmp_"
+        with open(
+            "{}/concatenate/test_concatenate.incfg".format(TRAVIS_PATH_ADDITIONAL)
+        ) as inf:
+            yaml = YAML(typ="safe")
+            incfg = yaml.load(inf)
+
         # TODO check file names
         annotation_file = "{}/align_1/test_annotation.csv".format(
             TRAVIS_PATH_ADDITIONAL
@@ -399,6 +404,7 @@ class TestComplex(TestCase):
         outdf = load_monomer_info(
             annotation_file,
             identities_file,
+            incfg["first_focus_sequence"],
             alignment_file,
             use_best_reciprocal,
             identity_threshold,
@@ -410,7 +416,12 @@ class TestComplex(TestCase):
         """
         TODO
         """
-        tmp_prefix = "tmp_"
+        with open(
+            "{}/concatenate/test_concatenate.incfg".format(TRAVIS_PATH_ADDITIONAL)
+        ) as inf:
+            yaml = YAML(typ="safe")
+            incfg = yaml.load(inf)
+
         # TODO check file names
         annotation_file = "{}/align_1/test_annotation.csv".format(
             TRAVIS_PATH_ADDITIONAL
@@ -430,6 +441,7 @@ class TestComplex(TestCase):
         outdf = load_monomer_info(
             annotation_file,
             identities_file,
+            incfg["first_focus_sequence"],
             alignment_file,
             use_best_reciprocal,
             identity_threshold,
