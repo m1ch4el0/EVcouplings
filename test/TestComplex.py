@@ -11,7 +11,7 @@ import tempfile
 import pandas as pd
 from unittest import TestCase
 from copy import deepcopy
-import yaml
+from ruamel.yaml import YAML
 from evcouplings.complex.alignment import *
 from evcouplings.complex.distance import *
 from evcouplings.complex.similarity import *
@@ -72,10 +72,12 @@ class TestComplex(TestCase):
 
         # input and output configuration
         with open("{}/concatenate/test_new_concatenate.incfg".format(TRAVIS_PATH)) as inf:
-            self.incfg = yaml.safe_load(inf)
+            yaml = YAML(typ='safe')
+            self.incfg = yaml.load(inf)
 
         with open("{}/concatenate/test_new_concatenate.outcfg".format(TRAVIS_PATH)) as inf:
-            self.incfg = yaml.safe_load(inf)
+            yaml = YAML(typ='safe')
+            self.outcfg = yaml.load(inf)
 
     def test_genome_distance(self):
         """
