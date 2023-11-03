@@ -393,7 +393,7 @@ class TestComplex(TestCase):
 
         # TODO load output from file
         _outdf = pd.read_csv(
-            "{}/test_monomer_info_false.csv".format(TRAVIS_PATH_ADDITIONAL)
+            "{}/test_monomer_info_False.csv".format(TRAVIS_PATH_ADDITIONAL)
         )
 
         outdf = load_monomer_info(
@@ -424,7 +424,7 @@ class TestComplex(TestCase):
 
         # TODO load output from file
         _outdf = pd.read_csv(
-            "{}/test_monomer_info_true.csv".format(TRAVIS_PATH_ADDITIONAL)
+            "{}/test_monomer_info_True.csv".format(TRAVIS_PATH_ADDITIONAL)
         )
 
         outdf = load_monomer_info(
