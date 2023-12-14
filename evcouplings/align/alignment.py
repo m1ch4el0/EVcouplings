@@ -11,7 +11,7 @@ from collections import namedtuple, OrderedDict, defaultdict
 from copy import deepcopy
 
 import numpy as np
-from numba import jit
+from numba import jit, prange
 
 from evcouplings.utils.calculations import entropy
 from evcouplings.utils.helpers import DefaultOrderedDict, wrap
@@ -35,7 +35,9 @@ ALPHABET_DNA = GAP + ALPHABET_DNA_NOGAP
 ALPHABET_RNA_NOGAP = "ACGU"
 ALPHABET_RNA = GAP + ALPHABET_RNA_NOGAP
 
-HMMER_PREFIX_WARNING = "# WARNING: seq names have been made unique by adding a prefix of"
+HMMER_PREFIX_WARNING = (
+    "# WARNING: seq names have been made unique by adding a prefix of"
+)
 
 
 def read_fasta(fileobj):
@@ -86,7 +88,7 @@ def write_fasta(sequences, fileobj, width=80):
     fileobj : file-like obj
         File to which alignment will be written
     """
-    for (seq_id, seq) in sequences:
+    for seq_id, seq in sequences:
         fileobj.write(">{}\n".format(seq_id))
         fileobj.write(wrap(seq, width=width) + "\n")
 
@@ -107,15 +109,12 @@ def write_aln(sequences, fileobj, width=80):
     fileobj : file-like obj
         File to which alignment will be written
     """
-    for (seq_id, seq) in sequences:
+    for seq_id, seq in sequences:
         fileobj.write(seq + "\n")
 
 
 # Holds information of a parsed Stockholm alignment file
-StockholmAlignment = namedtuple(
-    "StockholmAlignment",
-    ["seqs", "gf", "gc", "gs", "gr"]
-)
+StockholmAlignment = namedtuple("StockholmAlignment", ["seqs", "gf", "gc", "gs", "gr"])
 
 
 def read_stockholm(fileobj, read_annotation=False, raise_hmmer_prefixes=True):
@@ -279,15 +278,12 @@ def read_a3m(fileobj, inserts="first"):
             # gaps in the other sequences
             if i == 0:
                 uppercase_cols = [
-                    j for (j, c) in enumerate(seq)
-                    if (c == c.upper() or c == "-")
+                    j for (j, c) in enumerate(seq) if (c == c.upper() or c == "-")
                 ]
                 gap_template = np.array(["."] * len(seq))
                 filled_seq = seq
             else:
-                uppercase_chars = [
-                    c for c in seq if c == c.upper() or c == "-"
-                ]
+                uppercase_chars = [c for c in seq if c == c.upper() or c == "-"]
                 filled = np.copy(gap_template)
                 filled[uppercase_cols] = uppercase_chars
                 filled_seq = "".join(filled)
@@ -299,9 +295,7 @@ def read_a3m(fileobj, inserts="first"):
             # the final sequence in alignment
             seq = "".join([c for c in seq if c == c.upper() and c != "."])
         else:
-            raise ValueError(
-                "Invalid option for inserts: {}".format(inserts)
-            )
+            raise ValueError("Invalid option for inserts: {}".format(inserts))
 
         seqs[seq_id] = filled_seq
 
@@ -321,7 +315,7 @@ def write_a3m(sequences, fileobj, insert_gap=INSERT_GAP, width=80):
     fileobj : file-like obj
         File to which alignment will be written
     """
-    for (seq_id, seq) in sequences:
+    for seq_id, seq in sequences:
         fileobj.write(">{}\n".format(seq_id))
         fileobj.write(seq.replace(insert_gap, "") + "\n")
 
@@ -456,16 +450,12 @@ def map_from_alphabet(alphabet=ALPHABET_PROTEIN, default=GAP):
     ValueError
         For invalid default character
     """
-    map_ = {
-        c: i for i, c in enumerate(alphabet)
-    }
+    map_ = {c: i for i, c in enumerate(alphabet)}
 
     try:
         default = map_[default]
     except KeyError:
-        raise ValueError(
-            "Default {} is not in alphabet {}".format(default, alphabet)
-        )
+        raise ValueError("Default {} is not in alphabet {}".format(default, alphabet))
 
     return defaultdict(lambda: default, map_)
 
@@ -503,8 +493,14 @@ class Alignment:
         2. Sequence ranges in IDs are not adjusted when selecting
            subsets of positions
     """
-    def __init__(self, sequence_matrix, sequence_ids=None, annotation=None,
-                 alphabet=ALPHABET_PROTEIN):
+
+    def __init__(
+        self,
+        sequence_matrix,
+        sequence_ids=None,
+        annotation=None,
+        alphabet=ALPHABET_PROTEIN,
+    ):
         """
         Create new alignment object from ready-made components.
 
@@ -563,17 +559,13 @@ class Alignment:
             if len(sequence_ids) != self.N:
                 raise ValueError(
                     "Number of sequence IDs and length of "
-                    "alignment do not match".format(
-                        len(sequence_ids), self.L
-                    )
+                    "alignment do not match".format(len(sequence_ids), self.L)
                 )
 
             # make sure we get rid of iterators etc.
             self.ids = np.array(list(sequence_ids))
 
-        self.id_to_index = {
-            id_: i for i, id_ in enumerate(self.ids)
-        }
+        self.id_to_index = {id_: i for i, id_ in enumerate(self.ids)}
 
         if annotation is not None:
             self.annotation = annotation
@@ -600,14 +592,17 @@ class Alignment:
         """
         matrix = sequences_to_matrix(sequences.values())
 
-        return cls(
-            matrix, sequences.keys(), **kwargs
-        )
+        return cls(matrix, sequences.keys(), **kwargs)
 
     @classmethod
-    def from_file(cls, fileobj, format="fasta",
-                  a3m_inserts="first", raise_hmmer_prefixes=True,
-                  **kwargs):
+    def from_file(
+        cls,
+        fileobj,
+        format="fasta",
+        a3m_inserts="first",
+        raise_hmmer_prefixes=True,
+        **kwargs
+    ):
         """
         Construct an alignment object by reading in an
         alignment file.
@@ -649,8 +644,9 @@ class Alignment:
             # only reads first Stockholm alignment contained in file
             ali = next(
                 read_stockholm(
-                    fileobj, read_annotation=True,
-                    raise_hmmer_prefixes=raise_hmmer_prefixes
+                    fileobj,
+                    read_annotation=True,
+                    raise_hmmer_prefixes=raise_hmmer_prefixes,
                 )
             )
             seqs = ali.seqs
@@ -677,9 +673,7 @@ class Alignment:
         elif index in range(self.N):
             return self.matrix[index, :]
         else:
-            raise KeyError(
-                "Not a valid index for sequence alignment: {}".format(index)
-            )
+            raise KeyError("Not a valid index for sequence alignment: {}".format(index))
 
     def __len__(self):
         return self.N
@@ -769,10 +763,7 @@ class Alignment:
 
         # do not copy annotation since it may become
         # inconsistent
-        return Alignment(
-            np.copy(sel_matrix), np.copy(ids),
-            alphabet=self.alphabet
-        )
+        return Alignment(np.copy(sel_matrix), np.copy(ids), alphabet=self.alphabet)
 
     def apply(self, columns=None, sequences=None, func=np.char.lower):
         """
@@ -811,8 +802,10 @@ class Alignment:
                 mod_matrix[sequences, :] = func(mod_matrix[sequences, :])
 
         return Alignment(
-            mod_matrix, np.copy(self.ids), deepcopy(self.annotation),
-            alphabet=self.alphabet
+            mod_matrix,
+            np.copy(self.ids),
+            deepcopy(self.annotation),
+            alphabet=self.alphabet,
         )
 
     def replace(self, original, replacement, columns=None, sequences=None):
@@ -838,10 +831,7 @@ class Alignment:
 
         """
         return self.apply(
-            columns, sequences,
-            func=lambda x: np.char.replace(
-                x, original, replacement
-            )
+            columns, sequences, func=lambda x: np.char.replace(x, original, replacement)
         )
 
     def lowercase_columns(self, columns):
@@ -860,9 +850,7 @@ class Alignment:
         Alignment
             Alignment with lowercase columns
         """
-        return self.apply(
-            columns=columns, func=np.char.lower
-        ).replace(
+        return self.apply(columns=columns, func=np.char.lower).replace(
             self._match_gap, self._insert_gap, columns=columns
         )
 
@@ -871,9 +859,7 @@ class Alignment:
         Ensure self.matrix_mapped exists
         """
         if self.matrix_mapped is None:
-            self.matrix_mapped = map_matrix(
-                self.matrix, self.alphabet_map
-            )
+            self.matrix_mapped = map_matrix(self.matrix, self.alphabet_map)
 
     def set_weights(self, identity_threshold=0.8):
         """
@@ -964,8 +950,7 @@ class Alignment:
                 weights = self.weights
 
             self._pair_frequencies = pair_frequencies(
-                self.matrix_mapped, weights,
-                self.num_symbols, self.frequencies
+                self.matrix_mapped, weights, self.num_symbols, self.frequencies
             )
 
         return self._pair_frequencies
@@ -1015,8 +1000,7 @@ class Alignment:
             Vector of length L with conservation scores
         """
         return np.apply_along_axis(
-            lambda x: entropy(x, normalize=normalize),
-            axis=1, arr=self.frequencies
+            lambda x: entropy(x, normalize=normalize), axis=1, arr=self.frequencies
         )
 
     def write(self, fileobj, format="fasta", width=80):
@@ -1037,10 +1021,7 @@ class Alignment:
         ValueError
             Upon invalid file format specification
         """
-        seqs = (
-            (id_, "".join(self.matrix[i]))
-            for (i, id_) in enumerate(self.ids)
-        )
+        seqs = ((id_, "".join(self.matrix[i])) for (i, id_) in enumerate(self.ids))
 
         if format == "fasta":
             write_fasta(seqs, fileobj, width)
@@ -1049,9 +1030,7 @@ class Alignment:
         elif format == "aln":
             write_aln(seqs, fileobj, width)
         else:
-            raise ValueError(
-                "Invalid alignment format: {}".format(format)
-            )
+            raise ValueError("Invalid alignment format: {}".format(format))
 
 
 @jit(nopython=True)
@@ -1116,7 +1095,9 @@ def pair_frequencies(matrix, seq_weights, num_symbols, fi):
         for i in range(L):
             for j in range(i + 1, L):
                 fij[i, j, matrix[s, i], matrix[s, j]] += seq_weights[s]
-                fij[j, i, matrix[s, j], matrix[s, i]] = fij[i, j, matrix[s, i], matrix[s, j]]
+                fij[j, i, matrix[s, j], matrix[s, i]] = fij[
+                    i, j, matrix[s, i], matrix[s, j]
+                ]
 
     # normalize frequencies by the number
     # of effective sequences
@@ -1155,7 +1136,7 @@ def identities_to_seq(seq, matrix):
         to each sequence in matrix
     """
     N, L = matrix.shape
-    identities = np.zeros((N, ))
+    identities = np.zeros((N,))
 
     for i in range(N):
         id_i = 0
@@ -1168,7 +1149,7 @@ def identities_to_seq(seq, matrix):
     return identities
 
 
-@jit(nopython=True)
+@jit(nopython=True, parallel=True, error_model="numpy")
 def num_cluster_members(matrix, identity_threshold):
     """
     Calculate number of sequences in alignment
@@ -1197,15 +1178,11 @@ def num_cluster_members(matrix, identity_threshold):
     # minimal cluster size is 1 (self)
     num_neighbors = np.ones((N))
 
-    # compare all pairs of sequences
-    for i in range(N - 1):
-        for j in range(i + 1, N):
-            pair_id = 0
-            for k in range(L):
-                if matrix[i, k] == matrix[j, k]:
-                    pair_id += 1
-
-            if pair_id / L >= identity_threshold:
+    # compare all pairs of sequences using lower triangle matrix
+    for i in prange(N):
+        for j in prange(i + 1, N):
+            identity = np.sum(matrix[i] == matrix[j]) / L
+            if identity >= identity_threshold:
                 num_neighbors[i] += 1
                 num_neighbors[j] += 1
 
