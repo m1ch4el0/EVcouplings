@@ -18,6 +18,7 @@ from evcouplings.couplings.mapping import Segment
 from evcouplings.utils.config import check_required, InvalidParameterError
 from evcouplings.utils.system import create_prefix_folders, verify_resources
 from evcouplings.align.protocol import modify_alignment
+from evcouplings.align import Alignment
 
 from evcouplings.complex.alignment import write_concatenated_alignment
 from evcouplings.complex.distance import (
@@ -251,6 +252,54 @@ def describe_concatenation(
     data_df.to_csv(outfile)
 
 
+def save_alignment_files(
+    prefix: str, raw_ali: Alignment, mon_ali_1: Alignment, mon_ali_2: Alignment
+) -> dict:
+    """
+    Writes alignments to files
+
+    Args:
+        prefix (str): output path for current step in pipeline
+        raw_ali (Alignment):
+            the full concatenated alignment
+        mon_ali1 (Alignment):
+            An alignment of the first monomer sequences with
+            only the sequences contained in the concatenated
+            alignment
+        mon_ali2 (Alignment):
+            An alignment of the second monomer sequences with
+        only the sequences contained in the concatenated
+        alignment
+
+    Returns:
+        outcfg : dict
+            Output configuration of the pipeline, including
+            the following fields:
+
+            * alignment_file
+            * raw_alignment_file
+    """
+
+    # save the alignment files
+    raw_alignment_file = prefix + "_raw.fasta"
+    with open(raw_alignment_file, "w") as of:
+        raw_ali.write(of)
+
+    mon_alignment_file_1 = prefix + "_monomer_1.fasta"
+    with open(mon_alignment_file_1, "w") as of:
+        mon_ali_1.write(of)
+
+    mon_alignment_file_2 = prefix + "_monomer_2.fasta"
+    with open(mon_alignment_file_2, "w") as of:
+        mon_ali_2.write(of)
+
+    outcfg = {"raw_alignment_file": raw_alignment_file}
+    outcfg["first_concatenated_monomer_alignment_file"] = mon_alignment_file_1
+    outcfg["second_concatenated_monomer_alignment_file"] = mon_alignment_file_2
+
+    return outcfg
+
+
 def genome_distance(**kwargs):
     """
     Protocol:
@@ -367,17 +416,7 @@ def genome_distance(**kwargs):
     )
 
     # save the alignment files
-    raw_alignment_file = prefix + "_raw.fasta"
-    with open(raw_alignment_file, "w") as of:
-        raw_ali.write(of)
-
-    mon_alignment_file_1 = prefix + "_monomer_1.fasta"
-    with open(mon_alignment_file_1, "w") as of:
-        mon_ali_1.write(of)
-
-    mon_alignment_file_2 = prefix + "_monomer_2.fasta"
-    with open(mon_alignment_file_2, "w") as of:
-        mon_ali_2.write(of)
+    outcfg_files = save_alignment_files(prefix, raw_ali, mon_ali_1, mon_ali_2)
 
     # filter the alignment
     aln_outcfg, _ = modify_alignment(
@@ -389,9 +428,7 @@ def genome_distance(**kwargs):
     # * focus_sequence: this is the identifier of the concatenated target
     #   sequence which will be passed into plmc with -f
     outcfg = aln_outcfg
-    outcfg["raw_alignment_file"] = raw_alignment_file
-    outcfg["first_concatenated_monomer_alignment_file"] = mon_alignment_file_1
-    outcfg["second_concatenated_monomer_alignment_file"] = mon_alignment_file_2
+    outcfg.update(outcfg_files)
     outcfg["focus_sequence"] = target_seq_id
 
     # Update the segments
@@ -470,38 +507,8 @@ def best_hit(**kwargs):
     # make sure output directory exists
     create_prefix_folders(prefix)
 
-    def _load_monomer_info(
-        annotations_file,
-        identities_file,
-        target_sequence,
-        alignment_file,
-        use_best_reciprocal,
-        identity_threshold,
-    ):
-        # read in annotation to a file and rename the appropriate column
-        annotation_table = read_species_annotation_table(annotations_file)
-
-        # read identity file
-        similarities = pd.read_csv(identities_file)
-
-        # create a pd.DataFrame containing the best hit in each organism
-        most_similar_in_species = most_similar_by_organism(
-            similarities, annotation_table
-        )
-
-        if use_best_reciprocal:
-            paralogs = find_paralogs(
-                target_sequence, annotation_table, similarities, identity_threshold
-            )
-
-            most_similar_in_species = filter_best_reciprocal(
-                alignment_file, paralogs, most_similar_in_species
-            )
-
-        return most_similar_in_species
-
     # load the information about each monomer alignment
-    most_similar_in_species_1 = _load_monomer_info(
+    most_similar_in_species_1 = load_monomer_info(
         kwargs["first_annotation_file"],
         kwargs["first_identities_file"],
         kwargs["first_focus_sequence"],
@@ -510,7 +517,7 @@ def best_hit(**kwargs):
         kwargs["paralog_identity_threshold"],
     )
 
-    most_similar_in_species_2 = _load_monomer_info(
+    most_similar_in_species_2 = load_monomer_info(
         kwargs["second_annotation_file"],
         kwargs["second_identities_file"],
         kwargs["second_focus_sequence"],
@@ -545,17 +552,7 @@ def best_hit(**kwargs):
     )
 
     # save the alignment files
-    raw_alignment_file = prefix + "_raw.fasta"
-    with open(raw_alignment_file, "w") as of:
-        raw_ali.write(of)
-
-    mon_alignment_file_1 = prefix + "_monomer_1.fasta"
-    with open(mon_alignment_file_1, "w") as of:
-        mon_ali_1.write(of)
-
-    mon_alignment_file_2 = prefix + "_monomer_2.fasta"
-    with open(mon_alignment_file_2, "w") as of:
-        mon_ali_2.write(of)
+    outcfg_files = save_alignment_files(prefix, raw_ali, mon_ali_1, mon_ali_2)
 
     aln_outcfg, _ = modify_alignment(
         raw_ali, target_seq_index, target_seq_id, kwargs["first_region_start"], **kwargs
@@ -566,9 +563,7 @@ def best_hit(**kwargs):
     # * focus_sequence: this is the identifier of the concatenated target
     #   sequence which will be passed into plmc with -f
     outcfg = aln_outcfg
-    outcfg["raw_alignment_file"] = raw_alignment_file
-    outcfg["first_concatenated_monomer_alignment_file"] = mon_alignment_file_1
-    outcfg["second_concatenated_monomer_alignment_file"] = mon_alignment_file_2
+    outcfg.update(outcfg_files)
     outcfg["focus_sequence"] = target_seq_id
 
     # Update the segments
@@ -742,17 +737,7 @@ def inter_species(**kwargs):
     )
 
     # save the alignment files
-    raw_alignment_file = prefix + "_raw.fasta"
-    with open(raw_alignment_file, "w") as of:
-        raw_ali.write(of)
-
-    mon_alignment_file_1 = prefix + "_monomer_1.fasta"
-    with open(mon_alignment_file_1, "w") as of:
-        mon_ali_1.write(of)
-
-    mon_alignment_file_2 = prefix + "_monomer_2.fasta"
-    with open(mon_alignment_file_2, "w") as of:
-        mon_ali_2.write(of)
+    outcfg_files = save_alignment_files(prefix, raw_ali, mon_ali_1, mon_ali_2)
 
     aln_outcfg, _ = modify_alignment(
         raw_ali, target_seq_index, target_seq_id, kwargs["first_region_start"], **kwargs
@@ -763,9 +748,7 @@ def inter_species(**kwargs):
     # * focus_sequence: this is the identifier of the concatenated target
     #   sequence which will be passed into plmc with -f
     outcfg = aln_outcfg
-    outcfg["raw_alignment_file"] = raw_alignment_file
-    outcfg["first_concatenated_monomer_alignment_file"] = mon_alignment_file_1
-    outcfg["second_concatenated_monomer_alignment_file"] = mon_alignment_file_2
+    outcfg.update(outcfg_files)
     outcfg["focus_sequence"] = target_seq_id
 
     # Update the segments
