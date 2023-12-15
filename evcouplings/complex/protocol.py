@@ -687,7 +687,7 @@ def inter_species(**kwargs):
         pairs = pd.merge(
             pairs, species_2, on="species_2", how="inner", suffixes=("_1", "_2")
         )
-        return pairs
+        return pairs.drop_duplicates()
 
     # load the information about each monomer alignment
     most_similar_in_species_1 = load_monomer_info(
