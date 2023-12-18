@@ -7,23 +7,21 @@ Authors:
 """
 import pandas as pd
 import numpy as np
-from evcouplings.align.alignment import (
-    Alignment, parse_header
-)
+from evcouplings.align.alignment import Alignment, parse_header
 from evcouplings.utils import InvalidParameterError
 
-SPECIES_ANNOTATION_COLUMNS = ["OS", "Tax"]
+SPECIES_ANNOTATION_COLUMNS = ["OX", "OS", "Tax"]
 
 
 def read_species_annotation_table(annotation_file):
     """
     Reads in the annotation.csv file and decides which column
-    contains the species information - this differs for uniref 
+    contains the species information - this differs for uniref
     and uniprot alignments. Adds a new column called "species"
-    with the correct annotations. 
+    with the correct annotations.
 
-    Note: Uniprot and Uniref databases can have different 
-    annotations even for the same sequence. 
+    Note: Uniprot and Uniref databases can have different
+    annotations even for the same sequence.
 
     Parameters
     ----------
@@ -67,9 +65,10 @@ def read_species_annotation_table(annotation_file):
 
     return data[["id", "name", "species"]]
 
+
 def most_similar_by_organism(similarities, id_to_organism):
     """
-    For each species in the alignment, finds the sequence 
+    For each species in the alignment, finds the sequence
     from that species that is most similar to the target sequence
 
     Parameters
@@ -78,22 +77,22 @@ def most_similar_by_organism(similarities, id_to_organism):
         The contents of identities.csv
     id_to_organism :  pd.DataFrame
         The contents of annotation.csv
-        
+
     Returns
     -------
     pd.DataFrame
         With columns id, species, identity_to_query.
         Where each row is the sequence in a particular species
         that was the most similar to the target sequence.
-    
-    """
-    species_to_most_similar = []
 
+    """
     # merge the two data frames
     data = similarities.merge(id_to_organism, on="id")
 
     # find the most similar in every organism
-    most_similar_in_species = data.sort_values(by="identity_to_query").groupby("species").last()
+    most_similar_in_species = (
+        data.sort_values(by="identity_to_query").groupby("species").last()
+    )
     most_similar_in_species["species"] = most_similar_in_species.index
     most_similar_in_species = most_similar_in_species.reset_index(drop=True)
 
@@ -133,7 +132,7 @@ def find_paralogs(target_id, id_to_organism, similarities, identity_threshold):
     # itself in the database.
     annotation_data = similarities.merge(id_to_organism, on="id")
     contains_annotation = [base_query_id in x for x in annotation_data.id]
-    query_hits = annotation_data.loc[contains_annotation , :]
+    query_hits = annotation_data.loc[contains_annotation, :]
     # get the species annotation for the query sequence
     query_species = list(query_hits.species.dropna())
 
@@ -146,7 +145,9 @@ def find_paralogs(target_id, id_to_organism, similarities, identity_threshold):
     return paralogs
 
 
-def filter_best_reciprocal(alignment, paralogs, most_similar_in_species, allowed_error=0.02):
+def filter_best_reciprocal(
+    alignment, paralogs, most_similar_in_species, allowed_error=0.02
+):
     """
     Takes in a dictionary of the best hit to each genome
     Removes sequences that are not the best reciprocal hit to the query sequence
@@ -160,11 +161,11 @@ def filter_best_reciprocal(alignment, paralogs, most_similar_in_species, allowed
         Created by find_paralogs() function
     most_similar_in_species : pd.DataFrame
         Contains the id, species name, and percent identity to query
-        for each sequence that was the best hit to the query in its 
+        for each sequence that was the best hit to the query in its
         respective species
     allowed_error : float
-        In order for a sequence to be filtered out of the alignment, 
-        it must be more identitical to a paralog sequence than the 
+        In order for a sequence to be filtered out of the alignment,
+        it must be more identitical to a paralog sequence than the
         target sequence by at least this amount
 
     Returns
@@ -194,15 +195,15 @@ def filter_best_reciprocal(alignment, paralogs, most_similar_in_species, allowed
     # for every sequence in the alignment that is the most similar to the query
     # in its respective species...
     for index, row in most_similar_in_species.iterrows():
-
         # get the index of that sequence in the alignment.
         alignment_index = ali.id_to_index[row.id]
 
         # Keep sequences if they are the best reciprocal hit -
         # i.e., that sequence is not more similar to any paralog
         # than it is to the query sequence
-        if np.all(identity_mat[:, alignment_index] < row.identity_to_query + allowed_error):
-
+        if np.all(
+            identity_mat[:, alignment_index] < row.identity_to_query + allowed_error
+        ):
             indices_to_keep.append(index)
 
     return most_similar_in_species.loc[indices_to_keep, :]
