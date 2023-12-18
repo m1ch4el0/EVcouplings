@@ -470,38 +470,8 @@ def best_hit(**kwargs):
     # make sure output directory exists
     create_prefix_folders(prefix)
 
-    def _load_monomer_info(
-        annotations_file,
-        identities_file,
-        target_sequence,
-        alignment_file,
-        use_best_reciprocal,
-        identity_threshold,
-    ):
-        # read in annotation to a file and rename the appropriate column
-        annotation_table = read_species_annotation_table(annotations_file)
-
-        # read identity file
-        similarities = pd.read_csv(identities_file)
-
-        # create a pd.DataFrame containing the best hit in each organism
-        most_similar_in_species = most_similar_by_organism(
-            similarities, annotation_table
-        )
-
-        if use_best_reciprocal:
-            paralogs = find_paralogs(
-                target_sequence, annotation_table, similarities, identity_threshold
-            )
-
-            most_similar_in_species = filter_best_reciprocal(
-                alignment_file, paralogs, most_similar_in_species
-            )
-
-        return most_similar_in_species
-
     # load the information about each monomer alignment
-    most_similar_in_species_1 = _load_monomer_info(
+    most_similar_in_species_1 = load_monomer_info(
         kwargs["first_annotation_file"],
         kwargs["first_identities_file"],
         kwargs["first_focus_sequence"],
@@ -510,7 +480,7 @@ def best_hit(**kwargs):
         kwargs["paralog_identity_threshold"],
     )
 
-    most_similar_in_species_2 = _load_monomer_info(
+    most_similar_in_species_2 = load_monomer_info(
         kwargs["second_annotation_file"],
         kwargs["second_identities_file"],
         kwargs["second_focus_sequence"],
@@ -524,7 +494,7 @@ def best_hit(**kwargs):
     species_intersection = most_similar_in_species_1.merge(
         most_similar_in_species_2,
         how="inner",  # takes the intersection
-        on="species",  # merges on species identifiers
+        on="species",  # merges on species identifiers # TODO alter here to OX
         suffixes=("_1", "_2"),
     )
 
@@ -685,7 +655,9 @@ def inter_species(**kwargs):
             ]
         )
         # rename column as preparation
-        species_1 = most_similar_species_1.rename(columns={"species": "species_1"})
+        species_1 = most_similar_species_1.rename(
+            columns={"species": "species_1"}
+        )  # TODO
         species_2 = most_similar_species_2.rename(columns={"species": "species_2"})
         # merge columns for by species to get alignment ids
         pairs = pd.merge(pairs, species_1, on="species_1", how="inner")

@@ -19,8 +19,11 @@ import pandas as pd
 
 from evcouplings.align import tools as at
 from evcouplings.align.alignment import (
-    detect_format, parse_header, read_fasta,
-    write_fasta, Alignment
+    detect_format,
+    parse_header,
+    read_fasta,
+    write_fasta,
+    Alignment,
 )
 
 from evcouplings.couplings.mapping import Segment
@@ -28,19 +31,25 @@ from evcouplings.couplings.mapping import Segment
 from evcouplings.utils import BailoutException
 
 from evcouplings.utils.config import (
-    check_required, InvalidParameterError, MissingParameterError,
-    read_config_file, write_config_file
+    check_required,
+    InvalidParameterError,
+    MissingParameterError,
+    read_config_file,
+    write_config_file,
 )
 
 from evcouplings.utils.system import (
-    create_prefix_folders, get, valid_file,
-    verify_resources, ResourceError
+    create_prefix_folders,
+    get,
+    valid_file,
+    verify_resources,
+    ResourceError,
 )
 
 from evcouplings.align.ena import (
     extract_embl_annotation,
     extract_cds_ids,
-    add_full_header
+    add_full_header,
 )
 
 
@@ -49,7 +58,7 @@ def _verify_sequence_id(sequence_id):
     Verify if a target sequence identifier is in proper
     format for the pipeline to run without errors
     (not none, and contains no whitespace)
-        
+
     Parameters
     ----------
     id : str
@@ -67,7 +76,9 @@ def _verify_sequence_id(sequence_id):
         )
 
     try:
-        if len(sequence_id.split()) != 1 or len(sequence_id) != len(sequence_id.strip()):
+        if len(sequence_id.split()) != 1 or len(sequence_id) != len(
+            sequence_id.strip()
+        ):
             raise InvalidParameterError(
                 "Target sequence identifier (sequence_id) may not contain any "
                 "whitespace (spaces, tabs, ...)"
@@ -81,8 +92,8 @@ def _verify_sequence_id(sequence_id):
 def _make_hmmsearch_raw_fasta(alignment_result, prefix):
     """
     HMMsearch results do not contain the query sequence
-    so we must construct a raw_fasta file with the query 
-    sequence as the first hit, to ensure proper numbering. 
+    so we must construct a raw_fasta file with the query
+    sequence as the first hit, to ensure proper numbering.
     The search result is filtered to only contain the columns with
     match states to the HMM, which has a one to one mapping to the
     query sequence.
@@ -100,18 +111,14 @@ def _make_hmmsearch_raw_fasta(alignment_result, prefix):
         path to raw focus alignment file
 
     """
+
     def _add_gaps_to_query(query_sequence_ali, ali):
-
-         # get the index of columns that do not contain match states (indicated by an x)
-        gap_index = [
-            i for i, x in enumerate(ali.annotation["GC"]["RF"]) if x != "x"
-        ]
+        # get the index of columns that do not contain match states (indicated by an x)
+        gap_index = [i for i, x in enumerate(ali.annotation["GC"]["RF"]) if x != "x"]
         # get the index of columns that contain match states (indicated by an x)
-        match_index = [
-            i for i, x in enumerate(ali.annotation["GC"]["RF"]) if x == "x"
-        ]
+        match_index = [i for i, x in enumerate(ali.annotation["GC"]["RF"]) if x == "x"]
 
-        # ensure that the length of the match states 
+        # ensure that the length of the match states
         # match the length of the sequence
         if len(match_index) != query_sequence_ali.L:
             raise ValueError(
@@ -134,16 +141,16 @@ def _make_hmmsearch_raw_fasta(alignment_result, prefix):
             else:
                 gapped_query_sequence += seq.pop(0)
 
-        new_sequence_ali = Alignment.from_dict({
-            query_sequence_ali.ids[0]: gapped_query_sequence
-        })
+        new_sequence_ali = Alignment.from_dict(
+            {query_sequence_ali.ids[0]: gapped_query_sequence}
+        )
         return new_sequence_ali
 
     # open the sequence file
     with open(alignment_result["target_sequence_file"]) as a:
         query_sequence_ali = Alignment.from_file(a, format="fasta")
 
-    # if the provided alignment is empty, just return the target sequence 
+    # if the provided alignment is empty, just return the target sequence
     raw_focus_alignment_file = prefix + "_raw.fasta"
     if not valid_file(alignment_result["raw_alignment_file"]):
         # write the query sequence to a fasta file
@@ -163,14 +170,14 @@ def _make_hmmsearch_raw_fasta(alignment_result, prefix):
             "Stockholm alignment {} missing RF"
             " annotation of match states".format(alignment_result["raw_alignment_file"])
         )
-            
+
     # add insertions to the query sequence in order to preserve correct
     # numbering of match sequences
     gapped_sequence_ali = _add_gaps_to_query(query_sequence_ali, ali)
 
-    # write a new alignment file with the query sequence as 
+    # write a new alignment file with the query sequence as
     # the first entry
-    
+
     with open(raw_focus_alignment_file, "w") as of:
         gapped_sequence_ali.write(of)
         ali.write(of)
@@ -178,8 +185,7 @@ def _make_hmmsearch_raw_fasta(alignment_result, prefix):
     return raw_focus_alignment_file
 
 
-def fetch_sequence(sequence_id, sequence_file,
-                   sequence_download_url, out_file):
+def fetch_sequence(sequence_id, sequence_file, sequence_download_url, out_file):
     """
     Fetch sequence either from database based on identifier, or from
     input sequence file.
@@ -208,26 +214,18 @@ def fetch_sequence(sequence_id, sequence_file,
         Identifier of sequence as stored in file, and sequence
     """
     if sequence_file is None:
-        get(
-            sequence_download_url.format(sequence_id),
-            out_file,
-            allow_redirects=True
-        )
+        get(sequence_download_url.format(sequence_id), out_file, allow_redirects=True)
     else:
         # if we have sequence file, try to copy it
         try:
             copy(sequence_file, out_file)
         except FileNotFoundError:
             raise ResourceError(
-                "sequence_file does not exist: {}".format(
-                    sequence_file
-                )
+                "sequence_file does not exist: {}".format(sequence_file)
             )
 
     # also make sure input file has something in it
-    verify_resources(
-        "Input sequence missing", out_file
-    )
+    verify_resources("Input sequence missing", out_file)
 
     with open(out_file) as f:
         seq = next(read_fasta(f))
@@ -293,9 +291,7 @@ def cut_sequence(sequence, sequence_id, region=None, first_index=None, out_file=
             raise InvalidParameterError(
                 "Invalid sequence range: "
                 "region={} first_index={} len(sequence)={}".format(
-                    region,
-                    first_index,
-                    len(sequence)
+                    region, first_index, len(sequence)
                 )
             )
 
@@ -347,6 +343,7 @@ def search_thresholds(use_bitscores, seq_threshold, domain_threshold, seq_len):
     tuple (str, str)
         Sequence- and domain-level thresholds ready to be fed into HMMER
     """
+
     def transform_bitscore(x):
         if isinstance(x, float):
             # float: interpret as relative fraction of length
@@ -366,8 +363,7 @@ def search_thresholds(use_bitscores, seq_threshold, domain_threshold, seq_len):
 
     if domain_threshold is None:
         raise MissingParameterError(
-            "domain_threshold must be explicitly defined "
-            "and may not be None/empty"
+            "domain_threshold must be explicitly defined " "and may not be None/empty"
         )
 
     if use_bitscores:
@@ -412,17 +408,15 @@ def extract_header_annotation(alignment, from_annotation=True):
     columns = [
         ("GN", "gene"),
         ("OS", "organism"),
-        ("PE", "existence_evidence"),
+        ("OX", "organism_id")("PE", "existence_evidence"),
         ("SV", "sequence_version"),
         ("n", "num_cluster_members"),
         ("Tax", "taxon"),
-        ("RepID", "representative_member")
+        ("RepID", "representative_member"),
     ]
 
     col_to_descr = OrderedDict(columns)
-    regex = re.compile("\s({})=".format(
-        "|".join(col_to_descr.keys()))
-    )
+    regex = re.compile("\s({})=".format("|".join(col_to_descr.keys())))
 
     # collect rows for dataframe in here
     res = []
@@ -438,9 +432,11 @@ def extract_header_annotation(alignment, from_annotation=True):
             seq_id = id_
             # query level by level to avoid creating new keys
             # in DefaultOrderedDict
-            if ("GS" in alignment.annotation and
-                    id_ in alignment.annotation["GS"] and
-                    "DE" in alignment.annotation["GS"][id_]):
+            if (
+                "GS" in alignment.annotation
+                and id_ in alignment.annotation["GS"]
+                and "DE" in alignment.annotation["GS"][id_]
+            ):
                 anno = alignment.annotation["GS"][id_]["DE"]
         else:
             split = id_.split(maxsplit=1)
@@ -465,10 +461,7 @@ def extract_header_annotation(alignment, from_annotation=True):
             res.append({"id": seq_id})
 
     df = pd.DataFrame(res)
-    return df.reindex(
-        ["id", "name"] + list(col_to_descr.keys()),
-        axis=1
-    )
+    return df.reindex(["id", "name"] + list(col_to_descr.keys()), axis=1)
 
 
 def describe_seq_identities(alignment, target_seq_index=0):
@@ -489,13 +482,9 @@ def describe_seq_identities(alignment, target_seq_index=0):
         for each sequence in alignment (in order of
         occurrence)
     """
-    id_to_query = alignment.identities_to(
-        alignment[target_seq_index]
-    )
+    id_to_query = alignment.identities_to(alignment[target_seq_index])
 
-    return pd.DataFrame(
-        {"id": alignment.ids, "identity_to_query": id_to_query}
-    )
+    return pd.DataFrame({"id": alignment.ids, "identity_to_query": id_to_query})
 
 
 def describe_frequencies(alignment, first_index, target_seq_index=None):
@@ -524,21 +513,19 @@ def describe_frequencies(alignment, first_index, target_seq_index=None):
     conservation = alignment.conservation()
 
     # careful not to include any characters that are non-match state (e.g. lowercase letters)
-    fi_cols = {
-        c: fi[:, alignment.alphabet_map[c]] for c in alignment.alphabet
-    }
+    fi_cols = {c: fi[:, alignment.alphabet_map[c]] for c in alignment.alphabet}
 
     if target_seq_index is not None:
         target_seq = alignment[target_seq_index]
     else:
-        target_seq = np.full((alignment.L, ), np.nan)
+        target_seq = np.full((alignment.L,), np.nan)
 
     info = pd.DataFrame(
         {
             "i": range(first_index, first_index + alignment.L),
             "A_i": target_seq,
             "conservation": conservation,
-            **fi_cols
+            **fi_cols,
         }
     )
     # reorder columns
@@ -607,7 +594,7 @@ def describe_coverage(alignment, prefix, first_index, minimum_column_coverage):
         first, last = pos[cov_first_idx], pos[cov_last_idx]
 
         # how many lowercase positions in covered region?
-        num_lc_cov = np.sum(~uppercase[cov_first_idx:cov_last_idx + 1])
+        num_lc_cov = np.sum(~uppercase[cov_first_idx : cov_last_idx + 1])
 
         # total number of upper- and lowercase positions,
         # and relative percentage
@@ -616,18 +603,38 @@ def describe_coverage(alignment, prefix, first_index, minimum_column_coverage):
         perc_cov = num_cov / len(uppercase)
 
         res.append(
-            (prefix, threshold, alignment.N, alignment.L,
-             num_cov, num_lc, perc_cov, first, last,
-             last - first + 1, num_lc_cov, NO_MEFF)
+            (
+                prefix,
+                threshold,
+                alignment.N,
+                alignment.L,
+                num_cov,
+                num_lc,
+                perc_cov,
+                first,
+                last,
+                last - first + 1,
+                num_lc_cov,
+                NO_MEFF,
+            )
         )
 
     df = pd.DataFrame(
-        res, columns=[
-            "prefix", "minimum_column_coverage", "num_seqs",
-            "seqlen", "num_cov", "num_lc", "perc_cov",
-            "1st_uc", "last_uc", "len_cov",
-            "num_lc_cov", "N_eff",
-        ]
+        res,
+        columns=[
+            "prefix",
+            "minimum_column_coverage",
+            "num_seqs",
+            "seqlen",
+            "num_cov",
+            "num_lc",
+            "perc_cov",
+            "1st_uc",
+            "last_uc",
+            "len_cov",
+            "num_lc_cov",
+            "N_eff",
+        ],
     )
     return df
 
@@ -668,10 +675,12 @@ def existing(**kwargs):
     check_required(
         kwargs,
         [
-            "prefix", "input_alignment",
-            "sequence_id", "first_index",
-            "extract_annotation"
-        ]
+            "prefix",
+            "input_alignment",
+            "sequence_id",
+            "first_index",
+            "extract_annotation",
+        ],
     )
 
     prefix = kwargs["prefix"]
@@ -682,10 +691,7 @@ def existing(**kwargs):
     # this file is starting point of pipeline;
     # check if input alignment actually exists
     input_alignment = kwargs["input_alignment"]
-    verify_resources(
-        "Input alignment does not exist",
-        input_alignment
-    )
+    verify_resources("Input alignment does not exist", input_alignment)
 
     # first try to autodetect format of alignment
     with open(input_alignment) as f:
@@ -693,9 +699,7 @@ def existing(**kwargs):
         if format is None:
             raise InvalidParameterError(
                 "Format of input alignment {} could not be "
-                "automatically detected.".format(
-                    input_alignment
-                )
+                "automatically detected.".format(input_alignment)
             )
 
     with open(input_alignment) as f:
@@ -705,10 +709,8 @@ def existing(**kwargs):
     annotation_file = None
     if kwargs["extract_annotation"]:
         annotation_file = prefix + "_annotation.csv"
-        from_anno_line = (format == "stockholm")
-        annotation = extract_header_annotation(
-            ali_raw, from_annotation=from_anno_line
-        )
+        from_anno_line = format == "stockholm"
+        annotation = extract_header_annotation(ali_raw, from_annotation=from_anno_line)
         annotation.to_csv(annotation_file, index=False)
 
     # Target sequence of alignment
@@ -727,8 +729,7 @@ def existing(**kwargs):
     # if we didn't find it, cannot continue
     if focus_index is None:
         raise InvalidParameterError(
-            "Target sequence {} could not be found in alignment"
-            .format(sequence_id)
+            "Target sequence {} could not be found in alignment".format(sequence_id)
         )
 
     # identify what columns (non-gap) to keep for focus
@@ -756,25 +757,21 @@ def existing(**kwargs):
 
     if region_start is None or region_end is None:
         raise InvalidParameterError(
-            "Could not extract region information " +
-            "from sequence header {} ".format(full_focus_header) +
-            "and first_index parameter is not given."
+            "Could not extract region information "
+            + "from sequence header {} ".format(full_focus_header)
+            + "and first_index parameter is not given."
         )
 
     # resubstitute full sequence ID from identifier
     # and region information
-    header = "{}/{}-{}".format(
-        id_, region_start, region_end
-    )
+    header = "{}/{}-{}".format(id_, region_start, region_end)
 
     focus_ali.ids[focus_index] = header
 
     # write target sequence to file
     target_sequence_file = prefix + ".fa"
     with open(target_sequence_file, "w") as f:
-        write_fasta(
-            [(header, focus_seq_nogap)], f
-        )
+        write_fasta([(header, focus_seq_nogap)], f)
 
     # apply sequence identity and fragment filters,
     # and gap threshold
@@ -803,7 +800,9 @@ def existing(**kwargs):
     return outcfg
 
 
-def modify_alignment(focus_ali, target_seq_index, target_seq_id, region_start, **kwargs):
+def modify_alignment(
+    focus_ali, target_seq_index, target_seq_id, region_start, **kwargs
+):
     """
     Apply pairwise identity filtering, fragment filtering, and exclusion
     of columns with too many gaps to a sequence alignment. Also generates
@@ -847,10 +846,14 @@ def modify_alignment(focus_ali, target_seq_index, target_seq_id, region_start, *
     check_required(
         kwargs,
         [
-            "prefix", "seqid_filter", "hhfilter",
-            "minimum_sequence_coverage", "minimum_column_coverage",
-            "compute_num_effective_seqs", "theta",
-        ]
+            "prefix",
+            "seqid_filter",
+            "hhfilter",
+            "minimum_sequence_coverage",
+            "minimum_column_coverage",
+            "compute_num_effective_seqs",
+            "theta",
+        ],
     )
 
     prefix = kwargs["prefix"]
@@ -886,9 +889,11 @@ def modify_alignment(focus_ali, target_seq_index, target_seq_id, region_start, *
         filtered_file = prefix + "_filtered.a3m"
 
         at.run_hhfilter(
-            focus_fasta_file, filtered_file,
+            focus_fasta_file,
+            filtered_file,
             threshold=kwargs["seqid_filter"],
-            columns="first", binary=kwargs["hhfilter"]
+            columns="first",
+            binary=kwargs["hhfilter"],
         )
 
         with open(filtered_file) as f:
@@ -917,15 +922,11 @@ def modify_alignment(focus_ali, target_seq_index, target_seq_id, region_start, *
     # Note: running hhfilter might cause a loss of the target seque
     # if it is not the first sequence in the file! To be sure that
     # nothing goes wrong, target_seq_index should always be 0.
-    describe_seq_identities(
-        ali, target_seq_index=target_seq_index
-    ).to_csv(
+    describe_seq_identities(ali, target_seq_index=target_seq_index).to_csv(
         outcfg["identities_file"], float_format="%.3f", index=False
     )
 
-    describe_frequencies(
-        ali, region_start, target_seq_index=target_seq_index
-    ).to_csv(
+    describe_frequencies(ali, region_start, target_seq_index=target_seq_index).to_csv(
         outcfg["frequencies_file"], float_format="%.3f", index=False
     )
 
@@ -973,24 +974,18 @@ def modify_alignment(focus_ali, target_seq_index, target_seq_id, region_start, *
 
         # create table with number of cluster members (inverse sequence
         # weights) for each sequence
-        inv_seq_weights = pd.DataFrame({
-            "id": cut_ali.ids,
-            "num_cluster_members": cut_ali.num_cluster_members
-        })
+        inv_seq_weights = pd.DataFrame(
+            {"id": cut_ali.ids, "num_cluster_members": cut_ali.num_cluster_members}
+        )
 
         # save sequence weights to file and add to output config
         outcfg["sequence_weights_file"] = prefix + "_inverse_sequence_weights.csv"
-        inv_seq_weights.to_csv(
-            outcfg["sequence_weights_file"], index=False
-        )
+        inv_seq_weights.to_csv(outcfg["sequence_weights_file"], index=False)
     else:
         n_eff = None
 
     # save coverage statistics to file
-    coverage_stats.to_csv(
-        outcfg["statistics_file"], float_format="%.3f",
-        index=False
-    )
+    coverage_stats.to_csv(outcfg["statistics_file"], float_format="%.3f", index=False)
 
     # store description of final sequence alignment in outcfg
     # (note these parameters will be updated by couplings protocol)
@@ -1049,13 +1044,25 @@ def jackhmmer_search(**kwargs):
     check_required(
         kwargs,
         [
-            "prefix", "sequence_id", "sequence_file",
-            "sequence_download_url", "region", "first_index",
-            "use_bitscores", "domain_threshold", "sequence_threshold",
-            "database", "iterations", "cpu", "nobias", "reuse_alignment",
-            "checkpoints_hmm", "checkpoints_ali", "jackhmmer",
-            "extract_annotation"
-        ]
+            "prefix",
+            "sequence_id",
+            "sequence_file",
+            "sequence_download_url",
+            "region",
+            "first_index",
+            "use_bitscores",
+            "domain_threshold",
+            "sequence_threshold",
+            "database",
+            "iterations",
+            "cpu",
+            "nobias",
+            "reuse_alignment",
+            "checkpoints_hmm",
+            "checkpoints_ali",
+            "jackhmmer",
+            "extract_annotation",
+        ],
     )
     prefix = kwargs["prefix"]
 
@@ -1074,7 +1081,7 @@ def jackhmmer_search(**kwargs):
         kwargs["sequence_id"],
         kwargs["sequence_file"],
         kwargs["sequence_download_url"],
-        full_sequence_file
+        full_sequence_file,
     )
 
     # cut sequence to target region and save in sequence_file
@@ -1084,7 +1091,7 @@ def jackhmmer_search(**kwargs):
         kwargs["sequence_id"],
         kwargs["region"],
         kwargs["first_index"],
-        target_sequence_file
+        target_sequence_file,
     )
 
     # run jackhmmer... allow to reuse pre-exisiting
@@ -1098,9 +1105,9 @@ def jackhmmer_search(**kwargs):
 
         # check if the alignment file itself is also there
         verify_resources(
-            "Tried to reuse alignment, but empty or "
-            "does not exist",
-            ali["alignment"], ali["domtblout"]
+            "Tried to reuse alignment, but empty or " "does not exist",
+            ali["alignment"],
+            ali["domtblout"],
         )
     else:
         # otherwise, we have to run the alignment
@@ -1109,7 +1116,7 @@ def jackhmmer_search(**kwargs):
             kwargs["use_bitscores"],
             kwargs["sequence_threshold"],
             kwargs["domain_threshold"],
-            len(cut_seq)
+            len(cut_seq),
         )
 
         # run search process
@@ -1157,9 +1164,11 @@ def jackhmmer_search(**kwargs):
     # define a single protein segment based on target sequence
     outcfg["segments"] = [
         Segment(
-            "aa", kwargs["sequence_id"],
-            region_start, region_end,
-            range(region_start, region_end + 1)
+            "aa",
+            kwargs["sequence_id"],
+            region_start,
+            region_end,
+            range(region_start, region_end + 1),
         ).to_list()
     ]
 
@@ -1174,9 +1183,9 @@ def hmmbuild_and_search(**kwargs):
     """
     Protocol:
 
-    Build HMM from sequence alignment using hmmbuild and 
+    Build HMM from sequence alignment using hmmbuild and
     search against a sequence database using hmmsearch.
-    
+
     Parameters
     ----------
     Mandatory kwargs arguments:
@@ -1201,10 +1210,7 @@ def hmmbuild_and_search(**kwargs):
         # this file is starting point of pipeline;
         # check if input alignment actually exists
 
-        verify_resources(
-            "Input alignment does not exist",
-            input_alignment_file
-        )
+        verify_resources("Input alignment does not exist", input_alignment_file)
 
         # first try to autodetect format of alignment
         with open(input_alignment_file) as f:
@@ -1212,9 +1218,7 @@ def hmmbuild_and_search(**kwargs):
             if format is None:
                 raise InvalidParameterError(
                     "Format of input alignment {} could not be "
-                    "automatically detected.".format(
-                        input_alignment_file
-                    )
+                    "automatically detected.".format(input_alignment_file)
                 )
 
         with open(input_alignment_file) as f:
@@ -1224,9 +1228,7 @@ def hmmbuild_and_search(**kwargs):
         sequence_id = kwargs["sequence_id"]
 
         if sequence_id is None:
-            raise InvalidParameterError(
-                "Parameter sequence_id must be defined"
-            )
+            raise InvalidParameterError("Parameter sequence_id must be defined")
 
         # First, find focus sequence in alignment
         focus_index = None
@@ -1238,8 +1240,7 @@ def hmmbuild_and_search(**kwargs):
         # if we didn't find it, cannot continue
         if focus_index is None:
             raise InvalidParameterError(
-                "Target sequence {} could not be found in alignment"
-                .format(sequence_id)
+                "Target sequence {} could not be found in alignment".format(sequence_id)
             )
 
         # identify what columns (non-gap) to keep for focus
@@ -1263,31 +1264,29 @@ def hmmbuild_and_search(**kwargs):
         id_, region_start, region_end = parse_header(focus_id)
 
         # override with first_index if given (but respect region from alignment if defined)
-        if kwargs["first_index"] is not None and (region_start is None or region_end is None):
+        if kwargs["first_index"] is not None and (
+            region_start is None or region_end is None
+        ):
             region_start = kwargs["first_index"]
             region_end = region_start + len(focus_seq_nogap) - 1
 
         if region_start is None or region_end is None:
             raise InvalidParameterError(
-                "Could not extract region information " +
-                "from sequence header {} ".format(full_focus_header) +
-                "and first_index parameter is not given."
+                "Could not extract region information "
+                + "from sequence header {} ".format(full_focus_header)
+                + "and first_index parameter is not given."
             )
 
         # resubstitute full sequence ID from identifier
         # and region information
-        header = "{}/{}-{}".format(
-            id_, region_start, region_end
-        )
+        header = "{}/{}-{}".format(id_, region_start, region_end)
 
         focus_ali.ids[focus_index] = header
 
         # write target sequence to file
         target_sequence_file = prefix + ".fa"
         with open(target_sequence_file, "w") as f:
-            write_fasta(
-                [(header, focus_seq_nogap)], f
-            )
+            write_fasta([(header, focus_seq_nogap)], f)
 
         # swap target sequence to first position if it is not
         # the first sequence in alignment;
@@ -1307,19 +1306,26 @@ def hmmbuild_and_search(**kwargs):
 
         return focus_fasta_file, target_sequence_file, region_start, region_end
 
-
-    # define the gap threshold for inclusion in HMM's build by HMMbuild. 
+    # define the gap threshold for inclusion in HMM's build by HMMbuild.
     SYMFRAC_HMMBUILD = 0.0
 
     # check for required options
     check_required(
         kwargs,
         [
-            "prefix", "sequence_id", "alignment_file",
-            "use_bitscores", "domain_threshold", "sequence_threshold",
-            "database", "cpu", "nobias", "reuse_alignment",
-            "hmmbuild", "hmmsearch"
-        ]
+            "prefix",
+            "sequence_id",
+            "alignment_file",
+            "use_bitscores",
+            "domain_threshold",
+            "sequence_threshold",
+            "database",
+            "cpu",
+            "nobias",
+            "reuse_alignment",
+            "hmmbuild",
+            "hmmsearch",
+        ],
     )
     prefix = kwargs["prefix"]
 
@@ -1330,10 +1336,12 @@ def hmmbuild_and_search(**kwargs):
     create_prefix_folders(prefix)
 
     # prepare input alignment for hmmbuild
-    focus_fasta_file, target_sequence_file, region_start, region_end = \
-        _format_alignment_for_hmmbuild(
-            kwargs["alignment_file"], **kwargs
-        )
+    (
+        focus_fasta_file,
+        target_sequence_file,
+        region_start,
+        region_end,
+    ) = _format_alignment_for_hmmbuild(kwargs["alignment_file"], **kwargs)
 
     # run hmmbuild_and_search... allow to reuse pre-exisiting
     # Stockholm alignment file here
@@ -1346,19 +1354,19 @@ def hmmbuild_and_search(**kwargs):
 
         # check if the alignment file itself is also there
         verify_resources(
-            "Tried to reuse alignment, but empty or "
-            "does not exist",
-            ali["alignment"], ali["domtblout"]
+            "Tried to reuse alignment, but empty or " "does not exist",
+            ali["alignment"],
+            ali["domtblout"],
         )
     else:
         # otherwise, we have to run the alignment
         # modify search thresholds to be suitable for hmmsearch
-        sequence_length = region_end - region_start + 1 
+        sequence_length = region_end - region_start + 1
         seq_threshold, domain_threshold = search_thresholds(
             kwargs["use_bitscores"],
             kwargs["sequence_threshold"],
             kwargs["domain_threshold"],
-            sequence_length
+            sequence_length,
         )
 
         # create the hmm
@@ -1381,7 +1389,7 @@ def hmmbuild_and_search(**kwargs):
             seq_threshold=seq_threshold,
             nobias=kwargs["nobias"],
             cpu=kwargs["cpu"],
-            binary=kwargs["hmmsearch"], 
+            binary=kwargs["hmmsearch"],
         )
 
         # get rid of huge stdout log file immediately
@@ -1410,17 +1418,19 @@ def hmmbuild_and_search(**kwargs):
         "hittable_file": ali["domtblout"],
     }
 
-    # convert the raw output alignment to fasta format 
+    # convert the raw output alignment to fasta format
     # and add the appropriate query sequecne
     raw_focus_alignment_file = _make_hmmsearch_raw_fasta(outcfg, prefix)
-    outcfg["raw_focus_alignment_file"] =  raw_focus_alignment_file
+    outcfg["raw_focus_alignment_file"] = raw_focus_alignment_file
 
     # define a single protein segment based on target sequence
     outcfg["segments"] = [
         Segment(
-            "aa", kwargs["sequence_id"],
-            region_start, region_end,
-            range(region_start, region_end + 1)
+            "aa",
+            kwargs["sequence_id"],
+            region_start,
+            region_end,
+            range(region_start, region_end + 1),
         ).to_list()
     ]
 
@@ -1474,8 +1484,9 @@ def standard(**kwargs):
     check_required(
         kwargs,
         [
-            "prefix", "extract_annotation",
-        ]
+            "prefix",
+            "extract_annotation",
+        ],
     )
 
     prefix = kwargs["prefix"]
@@ -1569,20 +1580,19 @@ def complex(**kwargs):
     check_required(
         kwargs,
         [
-            "prefix", "alignment_protocol",
+            "prefix",
+            "alignment_protocol",
             "uniprot_to_embl_table",
-            "ena_genome_location_table"
-        ]
+            "ena_genome_location_table",
+        ],
     )
 
     verify_resources(
-        "Uniprot to EMBL mapping table does not exist",
-        kwargs["uniprot_to_embl_table"]
+        "Uniprot to EMBL mapping table does not exist", kwargs["uniprot_to_embl_table"]
     )
 
     verify_resources(
-        "ENA genome location table does not exist",
-        kwargs["ena_genome_location_table"]
+        "ENA genome location table does not exist", kwargs["ena_genome_location_table"]
     )
 
     prefix = kwargs["prefix"]
@@ -1596,9 +1606,7 @@ def complex(**kwargs):
 
     if alignment_protocol not in PROTOCOLS:
         raise InvalidParameterError(
-            "Invalid choice for alignment protocol: {}".format(
-                alignment_protocol
-            )
+            "Invalid choice for alignment protocol: {}".format(alignment_protocol)
         )
 
     outcfg = PROTOCOLS[kwargs["alignment_protocol"]](**kwargs)
@@ -1612,7 +1620,7 @@ def complex(**kwargs):
         if kwargs["override_annotation_file"] is not None:
             verify_resources(
                 "Override annotation file does not exist",
-                kwargs["override_annotation_file"]
+                kwargs["override_annotation_file"],
             )
 
             outcfg["annotation_file"] = prefix + "_annotation.csv"
@@ -1620,18 +1628,13 @@ def complex(**kwargs):
             annotation_data.to_csv(outcfg["annotation_file"])
 
     # extract cds identifiers for alignment uniprot IDs
-    cds_ids = extract_cds_ids(
-        outcfg["alignment_file"],
-        kwargs["uniprot_to_embl_table"]
-    )
+    cds_ids = extract_cds_ids(outcfg["alignment_file"], kwargs["uniprot_to_embl_table"])
 
     # extract genome location information from ENA
     genome_location_filename = prefix + "_genome_location.csv"
 
     genome_location_table = extract_embl_annotation(
-        cds_ids,
-        kwargs["ena_genome_location_table"],
-        genome_location_filename
+        cds_ids, kwargs["ena_genome_location_table"], genome_location_filename
     )
 
     genome_location_table = add_full_header(
@@ -1651,13 +1654,10 @@ def complex(**kwargs):
 PROTOCOLS = {
     # standard buildali protocol (iterative hmmer search)
     "standard": standard,
-
     # build raw multiple sequence alignment using jackmmer
     "jackhmmer_search": jackhmmer_search,
-
     # start from an existing (external) alignment
     "existing": existing,
-
     # run alignment protocol and postprocess output for
     # complex pipeline
     "complex": complex,
@@ -1699,8 +1699,8 @@ def run(**kwargs):
 
     if kwargs["protocol"] not in PROTOCOLS:
         raise InvalidParameterError(
-            "Invalid protocol selection: " +
-            "{}. Valid protocols are: {}".format(
+            "Invalid protocol selection: "
+            + "{}. Valid protocols are: {}".format(
                 kwargs["protocol"], ", ".join(PROTOCOLS.keys())
             )
         )
