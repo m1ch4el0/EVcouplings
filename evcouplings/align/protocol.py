@@ -408,7 +408,8 @@ def extract_header_annotation(alignment, from_annotation=True):
     columns = [
         ("GN", "gene"),
         ("OS", "organism"),
-        ("OX", "organism_id")("PE", "existence_evidence"),
+        ("OX", "organism_id"),
+        ("PE", "existence_evidence"),
         ("SV", "sequence_version"),
         ("n", "num_cluster_members"),
         ("Tax", "taxon"),
