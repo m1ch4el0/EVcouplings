@@ -12,6 +12,7 @@ Authors:
 from collections import Counter
 import numpy as np
 import pandas as pd
+import sqlite3
 
 from evcouplings.couplings.mapping import Segment
 
@@ -620,51 +621,67 @@ def inter_species(**kwargs):
     # make sure output directory exists
     create_prefix_folders(prefix)
 
-    def _get_concat_pairs(
-        species_pairs_file: str,
-        most_similar_species_1: pd.DataFrame,
-        most_similar_species_2: pd.DataFrame,
+    def _find_concat_pairs(
+        set1: pd.DataFrame, set2: pd.DataFrame, db: str
     ) -> pd.DataFrame:
         """
         Maps sequence identifiers from different alignments
-        to each other based on their species
+        to each other based on their species identifier
 
         Args:
-            species_pairs_file (str): path to species-species file
-            most_similar_species_1 (pd.DataFrame): best hits to the focus sequence one
-            most_similar_species_2 (pd.DataFrame): best hits to the focus sequence two
+            set_1 (pd.DataFrame): best hits to the focus sequence one
+            set_2 (pd.DataFrame): best hits to the focus sequence two
+            db (str): path to a SQL species-species database
 
         Returns:
             pd.DataFrame: mapping between both alignments
         """
-        # read species pairs
-        pairs = pd.read_csv(
-            species_pairs_file,
-            sep=",",
-            names=["species_1", "species_2"],
-            header=None,
-            dtype=str,
-        )
-        # TODO add both directions: species a <-> species b
-        pairs = pd.concat(
+        species_id_1 = set1.species.values.tolist()
+        species_id_2 = set2.species.values.tolist()
+        try:
+            conn = sqlite3.connect(db)
+            cursor = conn.cursor()
+            # Construct the query
+            query = f"""
+                SELECT 
+                    CASE WHEN species1 IN ({','.join(map(str, species_id_1))}) THEN species1 ELSE species2 END AS entry_1,
+                    CASE WHEN species1 IN ({','.join(map(str, species_id_1))}) THEN species2 ELSE species1 END AS entry_2
+                FROM species_species
+                WHERE (species1 IN ({','.join(map(str, species_id_1))}) AND species2 IN ({','.join(map(str, species_id_2))}))
+                OR (species1 IN ({','.join(map(str, species_id_2))}) AND species2 IN ({','.join(map(str, species_id_1))}))
+            """
+            cursor.execute(query)
+            connections = cursor.fetchall()
+            conn.close()
+        except sqlite3.Error as e:
+            print("SQLite error:", e)
+            return None
+
+        result = pd.concat(
             [
-                pairs,
-                pairs.rename(
-                    columns={"species_2": "species_1", "species_1": "species_2"}
-                ),
-            ]
+                set1.set_index("species")
+                .loc[map(lambda x: x[0], connections)]
+                .reset_index(),
+                set2.set_index("species")
+                .loc[map(lambda x: x[1], connections)]
+                .reset_index(),
+            ],
+            axis=1,
+            ignore_index=True,
+        ).rename(
+            {
+                0: "species_1",
+                1: "id_1",
+                2: "identity_to_query_1",
+                3: "name_1",
+                4: "species_2",
+                5: "id_2",
+                6: "identity_to_query_2",
+                7: "name_2",
+            },
+            axis=1,
         )
-        # rename column as preparation
-        species_1 = most_similar_species_1.rename(
-            columns={"species": "species_1"}
-        )  # TODO
-        species_2 = most_similar_species_2.rename(columns={"species": "species_2"})
-        # merge columns for by species to get alignment ids
-        pairs = pd.merge(pairs, species_1, on="species_1", how="inner")
-        pairs = pd.merge(
-            pairs, species_2, on="species_2", how="inner", suffixes=("_1", "_2")
-        )
-        return pairs
+        return result
 
     # load the information about each monomer alignment
     most_similar_in_species_1 = load_monomer_info(
@@ -691,10 +708,10 @@ def inter_species(**kwargs):
     )
 
     # get all id pairs for concatenation defined by species-species file
-    species_intersection = _get_concat_pairs(
-        kwargs["species_species_file"],
+    species_intersection = _find_concat_pairs(
         most_similar_in_species_1,
         most_similar_in_species_2,
+        kwargs["species_species_file"],
     )
 
     # write concatenated alignment with distance filtering
