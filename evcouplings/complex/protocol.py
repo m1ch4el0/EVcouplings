@@ -636,8 +636,8 @@ def inter_species(**kwargs):
         Returns:
             pd.DataFrame: mapping between both alignments
         """
-        set1["species"] = pd.to_numeric(set1["species"], downcast=np.int64)
-        set2["species"] = pd.to_numeric(set2["species"], downcast=np.int64)
+        set1["species"] = pd.to_numeric(set1["species"], downcast="integer")
+        set2["species"] = pd.to_numeric(set2["species"], downcast="integer")
         species_id_1 = set1.species.values.tolist()
         species_id_2 = set2.species.values.tolist()
         try:
