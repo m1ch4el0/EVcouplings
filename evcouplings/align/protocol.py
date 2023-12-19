@@ -461,7 +461,7 @@ def extract_header_annotation(alignment, from_annotation=True):
         else:
             res.append({"id": seq_id})
 
-    df = pd.DataFrame(res, dtype=str)
+    df = pd.DataFrame(res)
     return df.reindex(["id", "name"] + list(col_to_descr.keys()), axis=1)
 
 
