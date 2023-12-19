@@ -10,6 +10,7 @@ import unittest
 import os
 import tempfile
 import pandas as pd
+import sqlite3
 from unittest import TestCase
 from copy import deepcopy
 from ruamel.yaml import YAML
@@ -339,9 +340,9 @@ class TestComplex(TestCase):
         temporary_incfg[
             "second_genome_location_file"
         ] = "{}/align_2/test_genome_location.csv".format(TRAVIS_PATH_ADDITIONAL)
-        temporary_incfg[
-            "species_species_file"
-        ] = "{}/species_mapping_flipped.csv".format(TRAVIS_PATH_ADDITIONAL)
+        temporary_incfg["species_species_file"] = "{}/species_species_test.db".format(
+            TRAVIS_PATH_ADDITIONAL
+        )
         temporary_incfg["use_best_reciprocal"] = True
         temporary_incfg["paralog_identity_threshold"] = 0.95
         # loading input parameters for inter-species concatenation
