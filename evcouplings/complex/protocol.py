@@ -704,11 +704,6 @@ def inter_species(**kwargs):
         kwargs["paralog_identity_threshold"],
     )
 
-    # TODO For testing remove afterwards
-    most_similar_in_species_1.to_csv(
-        prefix + "monomer_info_" + str(kwargs["use_best_reciprocal"]) + ".csv"
-    )
-
     # get all id pairs for concatenation defined by species-species file
     species_intersection = _find_concat_pairs(
         most_similar_in_species_1,
