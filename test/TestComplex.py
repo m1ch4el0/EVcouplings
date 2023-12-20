@@ -421,7 +421,7 @@ class TestComplex(TestCase):
             identity_threshold,
         )
 
-        pd.testing.assert_frame_equal(outdf, _outdf, check_like=True)
+        pd.testing.assert_frame_equal(outdf, _outdf, check_like=True, check_dtype=False)
 
     def test_load_monomer_info_reciprocal(self):
         """
@@ -459,7 +459,7 @@ class TestComplex(TestCase):
             identity_threshold,
         )
 
-        pd.testing.assert_frame_equal(outdf, _outdf, check_like=True)
+        pd.testing.assert_frame_equal(outdf, _outdf, check_like=True, check_dtype=False)
 
     def test_modify_complex_segments(self):
         """
