@@ -646,11 +646,11 @@ def inter_species(**kwargs):
             # Construct the query
             query = f"""
                 SELECT 
-                    CASE WHEN species1 IN ({','.join(map(str, species_id_1))}) THEN species1 ELSE species2 END AS entry_1,
-                    CASE WHEN species1 IN ({','.join(map(str, species_id_1))}) THEN species2 ELSE species1 END AS entry_2
+                    CASE WHEN species1 IN ({','.join(species_id_1)}) THEN species1 ELSE species2 END AS entry_1,
+                    CASE WHEN species1 IN ({','.join(species_id_1)}) THEN species2 ELSE species1 END AS entry_2
                 FROM species_species
-                WHERE (species1 IN ({','.join(map(str, species_id_1))}) AND species2 IN ({','.join(map(str, species_id_2))}))
-                OR (species1 IN ({','.join(map(str, species_id_2))}) AND species2 IN ({','.join(map(str, species_id_1))}))
+                WHERE (species1 IN ({','.join(species_id_1)}) AND species2 IN ({','.join(species_id_2)}))
+                OR (species1 IN ({','.join(species_id_2)}) AND species2 IN ({','.join(species_id_1)}))
             """
             cursor.execute(query)
             connections = cursor.fetchall()
