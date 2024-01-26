@@ -11,14 +11,14 @@ RUN conda install anaconda
 RUN pip install https://github.com/m1ch4el0/EVcouplings/archive/refs/heads/inter_species_sql.zip
 
 # tools
-# plmc
+# plmc | maybe bash scirps ?
 RUN wget https://github.com/debbiemarkslab/plmc/archive/refs/heads/master.zip -O plmc.zip
 RUN unzip plmc.zip -d plmc
 RUN rm plmc.zip
 WORKDIR /plmc/plmc-master
 RUN make all-openmp32
 WORKDIR /
-# jackhmmer
+# jackhmmer | maybe bash scripts ?
 RUN wget http://eddylab.org/software/hmmer/hmmer-3.4.tar.gz -O hmmer.tar.gz
 RUN gunzip hmmer.tar.gz
 RUN tar -xf hmmer.tar
@@ -28,3 +28,16 @@ RUN ./configure
 RUN make
 RUN make check
 RUN make install
+
+# Databases TODO clean up
+WORKDIR /DB/
+RUN wget https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz
+RUN gunzip uniprot_sprot.fasta.gz
+RUN wget https://marks.hms.harvard.edu/evcomplex_databases/cds_pro_2017_02.txt
+RUN wget https://marks.hms.harvard.edu/evcomplex_databases/idmapping_uniprot_embl_2017_02.txt 
+RUN ls
+# Files ?
+
+# Sample config overriden
+
+# run bash script for running python file with input file

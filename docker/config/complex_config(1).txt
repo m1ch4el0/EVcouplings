@@ -1,0 +1,266 @@
+pipeline: protein_complex
+stages:
+- align_1
+- align_2
+- concatenate
+- couplings
+#- compare
+
+global:
+  cpu:
+  prefix: output/
+  theta: 0.8
+
+align_1:
+  protocol: complex
+  alignment_protocol: existing
+  input_alignment: /n/groups/marks/users/rohan/bacterial-modules/output/FDOI_ECOLI_1-211_b0.2/align/FDOI_ECOLI_1-211_b0.2.a2m
+  override_annotation_file: /n/groups/marks/users/rohan/bacterial-modules/output/FDOI_ECOLI_1-211_b0.2/align/FDOI_ECOLI_1-211_b0.2_annotation.csv
+  prefix:
+  sequence_id: FDOI_ECOLI
+  sequence_file:
+  region:
+  - 1
+  - 211
+  first_index: 1
+
+  use_bitscores: true
+  domain_threshold: 0.2
+  sequence_threshold: 0.2
+  iterations: 5
+  database: uniprot
+
+  compute_num_effective_seqs: false
+  theta: 0.8
+
+  seqid_filter:
+  minimum_sequence_coverage: 50
+  minimum_column_coverage: 50
+
+  extract_annotation: true
+  cpu:
+  nobias: false
+  reuse_alignment: true
+  checkpoints_hmm: false
+  checkpoints_ali: false
+
+align_2:
+  protocol: complex
+  alignment_protocol: existing
+  input_alignment: /n/groups/marks/users/rohan/bacterial-modules/output/YJDF_ECOLI_1-209_b0.1/align/YJDF_ECOLI_1-209_b0.1.a2m
+  override_annotation_file: /n/groups/marks/users/rohan/bacterial-modules/output/YJDF_ECOLI_1-209_b0.1/align/YJDF_ECOLI_1-209_b0.1_annotation.csv
+  prefix:
+  sequence_id: YJDF_ECOLI
+  sequence_file:
+  region:
+  - 1
+  - 209
+  first_index: 1
+
+  use_bitscores: true
+  domain_threshold: 0.1
+  sequence_threshold: 0.1
+  iterations: 5
+  database: uniprot
+
+  compute_num_effective_seqs: false
+  theta: 0.8
+
+  seqid_filter:
+  minimum_sequence_coverage: 50
+  minimum_column_coverage: 50
+
+  extract_annotation: true
+  cpu:
+  nobias: false
+  reuse_alignment: true
+  checkpoints_hmm: false
+  checkpoints_ali: false
+
+concatenate:
+
+  first_alignment_file:
+  second_alignment_file:
+
+  protocol: best_hit
+  use_best_reciprocal: true
+  paralog_identity_threshold: 0.9
+
+    #maximum genome distance in bases allowed between pairs
+    #required for genome_distance protocol only
+  genome_distance_threshold: 1000
+
+  seqid_filter:
+  minimum_sequence_coverage: 50
+  minimum_column_coverage: 50
+
+  compute_num_effective_seqs: false
+  theta: 0.8
+
+  forbid_overlapping_concatenation: true
+
+couplings:
+  protocol: complex
+
+  prefix:
+  alignment_file:
+  focus_sequence:
+  focus_mode: true
+  segments:
+
+  theta: 0.8
+  iterations: 100
+  alphabet:
+  ignore_gaps: true
+  lambda_J: 0.01
+  lambda_J_times_Lq: true
+  lambda_h: 0.01
+  lambda_group:
+  scale_clusters:
+  save_model: true
+  reuse_ecs: false
+  cpu: 1
+
+  min_sequence_distance: 6
+  scoring_model: skewnormal
+  use_all_ecs_for_scoring: false
+
+compare:
+  pdb_alignment_method: hmmsearch
+  first_pdb_alignment_method: hmmsearch
+  second_pdb_alignment_method: hmmsearch
+  protocol: complex
+  ec_file:
+  prefix:
+    # Following parameters will be usually overriden by global settings / output of previous stage
+  first_sequence_id:
+  first_target_sequence_file:
+  first_sequence_file:
+  first_first_index:
+  first_region:
+    #pdb comparison parameters
+  first_by_alignment: true
+  first_max_num_structures: 20
+  first_max_num_hits: 20
+  first_compare_multimer: true
+  first_alignment_min_overlap: 20
+  first_use_bitscores: true
+  first_domain_threshold: 0.1
+  first_sequence_threshold: 0.1
+  first_pdb_ids:
+
+    # Following parameters will be usually overriden by global settings / output of previous stage
+  second_sequence_id:
+  second_target_sequence_file:
+  second_sequence_file:
+  second_first_index:
+  second_region:
+    #pdb comparison parameters
+  second_by_alignment: true
+  second_max_num_structures: 20
+  second_max_num_hits: 20
+  second_compare_multimer: true
+  second_alignment_min_overlap: 20
+  second_use_bitscores: true
+  second_domain_threshold: 0.1
+  second_sequence_threshold: 0.1
+  second_pdb_ids:
+  inter_pdb_ids:
+  inter_max_num_structures: 10
+  inter_max_num_hits: 10
+
+    # If True, find structures by sequence alignment against the PDB, otherwise identify structures using
+    # sequence_id and SIFTS database (sequence_id must be UniProt AC/ID in this case)
+
+    # Leave this parameter empty to use all PDB structures for given sequence_id, otherwise
+    # will be limited to the given IDs (single value or list). Important: note that this acts only as a filter on the
+    # structures found by alignment or in the SIFTS table (!)
+  pdb_ids:
+
+    # Comparison and plotting settings
+  raise_missing: false
+    # Set atom_filter to "CA" to compute C_alpha distances instead of minimum atom distances. If blank, will compute minimum atom distance
+  atom_filter:
+
+    # Distance cutoff (Angstrom) for a true positive pair
+  distance_cutoff: 5
+
+    # Only long-range pairs with abs(i-j)>= min_sequence_distance will be used for CouplingScoresCompared_longrange.csv file
+  min_sequence_distance: 6
+
+    # Plot contact maps with ECs above these mixture model probability cutoffs
+  plot_probability_cutoffs: 
+
+    # Plot fixed numbers of ECS. Integers will be interpreted as absolute numbers, floats as fractions of L (model length)
+  plot_lowest_count: 5
+  plot_highest_count: 10
+  #plot_increase: 5
+  
+  plot_model_cutoffs: [0.47, .57, .42, .52]
+
+
+    # Axis boundaries of contact map plot depending on range of ECs and structure.
+    # Options: union, intersection, ecs, structure, [start, end] (e.g. [100, 200])
+  boundaries: union
+
+    # scale sizes of EC dots in scatter plot based on strength of EC score
+  scale_sizes: true
+
+    # draw secondary structure on contact map plots
+  draw_secondary_structure: true
+
+databases:
+  uniprot: /n/groups/marks/databases/jackhmmer/uniprot/uniprot_2023_6.fasta
+  uniref100: /n/groups/marks/databases/jackhmmer/uniref100/uniref100_2023_6.fasta
+  uniref90: /n/groups/marks/databases/jackhmmer/uniref90/uniref90_2023_6.fasta
+  pdb_seqres: /n/groups/marks/databases/pdb_2019_11_26/pdb_seqres.txt
+  sequence_download_url: http://www.uniprot.org/uniprot/{}.fasta
+  pdb_mmtf_dir:
+  sifts_mapping_table: /n/groups/marks/databases/SIFTS/pdb_chain_uniprot_plus_2023_6_9.csv
+  sifts_sequence_db: /n/groups/marks/databases/SIFTS/pdb_chain_uniprot_plus_2023_6_9.fasta
+  uniprot_to_embl_table: /n/groups/marks/databases/complexes/idmapping/idmapping_uniprot_embl_2020_08.txt
+  ena_genome_location_table: /n/groups/marks/databases/complexes/ena/2020_08/cds_pro.txt
+
+tools:
+  jackhmmer: /n/groups/marks/pipelines/evcouplings/software/hmmer-3.1b2-linux-intel-x86_64/binaries/jackhmmer
+  hmmbuild: /n/groups/marks/pipelines/evcouplings/software/hmmer-3.1b2-linux-intel-x86_64/binaries/hmmbuild
+  hmmsearch: /n/groups/marks/pipelines/evcouplings/software/hmmer-3.1b2-linux-intel-x86_64/binaries/hmmsearch
+  hhfilter: /n/groups/marks/pipelines/evcouplings/software/hh-suite/bin/hhfilter
+  plmc: /n/groups/marks/pipelines/evcouplings/software/plmc/bin/plmc
+  psipred: /n/groups/marks/software/runpsipred
+  cns: /n/groups/marks/pipelines/evcouplings/software/cns_solve_1.21/intel-x86_64bit-linux/bin/cns
+  maxcluster: /n/groups/marks/pipelines/evcouplings/software/maxcluster64bit
+
+
+
+# Computational environment for batch jobs (using evcouplings command line application)
+environment:
+    # current options for engine: lsf, local (for local, only set cores and leave all other fields blank)
+    # If your batch engine of choice (SGE, Slurm, Torque) is not available yet, please consider contributing by
+    # implementing it and submitting a pull request!
+    # Note that "cores" will override the "cpu" parameter for "global"
+  engine: slurm
+  queue: short
+  cores: 1
+  memory: 2789
+  time: 1-0:0:0
+  configuration:
+  qos: prio_ag300 
+management:
+    # URI of database
+    database_uri:
+
+    # unique job identifier
+    job_name:
+
+    # add the following output files to results archive
+    #archive: [alignment_file, inter_ecs_model_prediction_file, contact_map_files, ec_file, ec_compared_all_file, 
+    #second_pdb_structure_hits_file, first_pdb_structure_hits_file, structure_hits_file, statistics_file]
+
+    # Delete the following output files after running the job if you don't need them, to save disk space.
+    # Note that this may jeopardize your ability to rerun parts of the job if intermediate files are missing.
+    # The following, deactivated default deletes the biggest output files.
+    #delete: [raw_alignment_file, model_file, ec_compared_inter_file, ec_compared_longrange_file, ec_lines_pml_file, ec_longrange_file, evzoom_file, 
+    #first_alignment_file, first_concatenated_monomer_alignment_file, first_identities_file,first_raw_focus_alignment_file, first_remapped_pdb_files, first_statistics_file,
+    #raw_ec_file, raw_focus_alignment_file,second_concatenated_monomer_alignment_file, second_identities_file, second_raw_focus_alignment_file, second_remapped_pdb_files, second_statistics_file]
+

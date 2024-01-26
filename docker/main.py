@@ -9,6 +9,12 @@ import time
 
 init()
 
+# global variables
+global config_monomer
+global config_complex
+global infile
+global threads
+
 def bold(text):
     return Style.BRIGHT + text + Style.RESET_ALL
 
@@ -18,25 +24,26 @@ def italic(text):
 def color(text, color):
     return color + text + Style.RESET_ALL
 
-def file_not_found(file):
-    print("File '" + italic(file) + "' was not found")
+def retry(file, message,required=False):
+    print(italic(file) + message)
     retry = input("Do you want to retry [" + bold("Y") +"/n]\t")
     if retry.lower() == "n" or retry.lower == "no":
-        # TODO quit()
-        exit
+        if required:
+            exit()
     else:
         return True
 
-def ask(text, func):
-    file = input(text)
+def ask(text, retry_message, is_valide, required=False):
+    user_input = input(text)
 
-    if  os.path.exists(file):
-        # TODO merge infiles
-        pass
-        func()
+    if  is_valide(user_input):
+        return user_input
     else:
-        if file_not_found(file):
-            ask(text, func)
+        if retry(user_input, retry_message, required):
+            ask(text, retry_message, is_valide)
+        else: 
+            print(bold("using default values"))
+            return ""
 
 def swim_whale(steps):
     def print_whale(top, bottom):
@@ -81,22 +88,34 @@ def main():
     print(f"\t*       {color(color=Fore.MAGENTA, text="Welcome to EVcomplex!")}        *")
     print("\t*                                    *")
     print("\t**************************************\n")
-    # batch config file
-    #ask("please provide your " + bold("config file") + "\n", lambda x: x)
+    # monomer config file
+    config_monomer = ask("please provide your " + bold("monomer config file") + "\n",
+                         " is not a valide file",
+                         lambda x: os.path.exists(x))
+    print("")
+    # complex config file
+    config_complex = ask("please provide your " + bold("complex config file") + "\n",
+                         " is not a valide file",
+                         lambda x: os.path.exists(x))
     print("")
     # batch proteins
-    #ask("please provide your " + bold("PPI file [.csv/.tsv]" + "\n"), lambda x: x)
+    infile = ask("please provide your " + bold("PPI file [.csv/.tsv]" + "\n"),
+        " is not a valide file",
+        lambda x: os.path.exists(x),
+        True)
     print("")
-    # threads
-    #ask("please define the " +  bold("number of threads" + "\n"), lambda x: x)
+    # threads 2x n?
+    threads = ask("please define the " +  bold("number of threads") + "\n",
+                  " is not a valide number",
+                  lambda x: x.isdigit() and x != "0"), #TODO
     print("")
     #
     print("\t**************************************")
     print("\t*                                    *")
-    print(f"\t*       {color(color=Fore.MAGENTA, text="calculations started")}         *")
+    print(f"\t*       {color(color=Fore.GREEN, text="calculations started")}         *")
     print("\t*                                    *")
     print("\t**************************************\n")
-    swim_whale(27)
+    swim_whale(31)
 
 
 
