@@ -1,7 +1,7 @@
 FROM mcr.microsoft.com/devcontainers/miniconda:3
 
 # Copy the environment.yml file to the /tmp/conda-tmp directory in the image
-COPY environment.yml /tmp/conda-tmp/
+COPY ./environment.yml /tmp/conda-tmp/
 # Run the command to update the Conda environment
 RUN if [ -f "/tmp/conda-tmp/environment.yml" ]; then /opt/conda/bin/conda env update -n base -f /tmp/conda-tmp/environment.yml; fi \
     && rm -rf /tmp/conda-tmp
@@ -35,9 +35,10 @@ RUN wget https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledge
 RUN gunzip uniprot_sprot.fasta.gz
 RUN wget https://marks.hms.harvard.edu/evcomplex_databases/cds_pro_2017_02.txt
 RUN wget https://marks.hms.harvard.edu/evcomplex_databases/idmapping_uniprot_embl_2017_02.txt 
-RUN ls
-# Files ?
-
-# Sample config overriden
+# Config files
+COPY ./config/complex_config.txt /config/
+COPY ./config/monomer_config_all.txt /config/
 
 # run bash script for running python file with input file
+COPY ./main.py /config/
+CMD [ "python", "/config/main.py" ]

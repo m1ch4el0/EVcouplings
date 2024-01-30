@@ -3,6 +3,7 @@ Script for managing user input for batch service
 - modifying config file
 - running batch service 
 """
+
 from colorama import init, Fore, Style, Back
 import os
 import time
@@ -124,16 +125,24 @@ def couplings(infile):
         config["align_1"]["sequence_threshold"] = float(row.bit1)
         config["align_1"]["region"] = [int(row.r_start_1), int(row.r_end_1)]
         config["align_1"]["first_index"] = int(row.r_start_1)
-        config["align_1"]["input_alignment"] = row.aln1 + ".a2m"
-        config["align_1"]["override_annotation_file"] = row.aln1 + "_annotation.csv"
+        config["align_1"]["input_alignment"] = (
+            "output/align" + f"{row.uid1}_{row.r_start_1}-{row.r_end_1}.a2m"
+        )
+        config["align_1"]["override_annotation_file"] = (
+            "output/align" + f"{row.uid1}_{row.r_start_1}-{row.r_end_1}_annotation.csv"
+        )
         # alignment 2
-        config["align_1"]["sequence_id"] = row.uid2
-        config["align_1"]["domain_threshold"] = float(row.bit2)
-        config["align_1"]["sequence_threshold"] = float(row.bit2)
-        config["align_1"]["region"] = [int(row.r_start_2), int(row.r_end_2)]
-        config["align_1"]["first_index"] = int(row.r_start_2)
-        config["align_1"]["input_alignment"] = row.aln2 + ".a2m"
-        config["align_1"]["override_annotation_file"] = row.aln2 + "_annotation.csv"
+        config["align_2"]["sequence_id"] = row.uid2
+        config["align_2"]["domain_threshold"] = float(row.bit2)
+        config["align_2"]["sequence_threshold"] = float(row.bit2)
+        config["align_2"]["region"] = [int(row.r_start_2), int(row.r_end_2)]
+        config["align_2"]["first_index"] = int(row.r_start_2)
+        config["align_2"]["input_alignment"] = (
+            "output/align" + f"{row.uid2}_{row.r_start_2}-{row.r_end_2}.a2m"
+        )
+        config["align_2"]["override_annotation_file"] = (
+            "output/align" + f"{row.uid2}_{row.r_start_2}-{row.r_end_2}_annotation.csv"
+        )
         # quick and dirty alignment size calculation
         if "couplings" in config["stages"]:
             L = (
