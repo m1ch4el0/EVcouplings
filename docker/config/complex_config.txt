@@ -239,13 +239,13 @@ environment:
     # If your batch engine of choice (SGE, Slurm, Torque) is not available yet, please consider contributing by
     # implementing it and submitting a pull request!
     # Note that "cores" will override the "cpu" parameter for "global"
-  engine: slurm
-  queue: short
+  engine: 
+  queue: 
   cores: 1
-  memory: 2789
-  time: 1-0:0:0
+  memory: 
+  time:
   configuration:
-  qos: prio_ag300 
+  qos: 
 management:
     # URI of database
     database_uri:
