@@ -1,0 +1,9 @@
+version: "3.11"
+services:
+  app:
+    build: .
+    image: ev:01
+    volumes:
+      - ./data:/evcomplex/
+    stdin_open: true
+    tty: true
