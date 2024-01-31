@@ -10,7 +10,8 @@ import time
 import re
 import pandas as pd
 import numpy as np
-from evcouplings.utils.config import read_config_file, write_config_file
+
+# from evcouplings.utils.config import read_config_file, write_config_file
 import multiprocessing
 
 init()
