@@ -1,9 +1,13 @@
-version: "3.11"
+version: "3"
 services:
   app:
     build: .
     image: ev:01
     volumes:
-      - ./data:/evcomplex/
+      - ${VOLUME_PATH:-~/Desktop/data}:/evcomplex/
+    environment:
+      - USER_INPUT=~/Desktop/data
     stdin_open: true
     tty: true
+
+  # docker-compose run --rm app

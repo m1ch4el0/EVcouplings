@@ -40,6 +40,11 @@ RUN wget https://marks.hms.harvard.edu/evcomplex_databases/idmapping_uniprot_emb
 COPY ./config/complex_config.txt /config/
 COPY ./config/monomer_config_all.txt /config/
 
+# Set environment variable to noninteractive
+ENV DEBIAN_FRONTEND noninteractive
+# Install tini
+RUN apt-get update && apt-get install -y tini
 # run bash script for running python file with input file
 COPY ./main.py /config/
-CMD [ "python", "/config/main.py" ]
+WORKDIR /
+CMD ["tini", "--", "python", "/config/main.py"]
