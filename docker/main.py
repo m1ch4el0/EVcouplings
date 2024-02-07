@@ -11,7 +11,7 @@ import re
 import pandas as pd
 import numpy as np
 
-# from evcouplings.utils.config import read_config_file, write_config_file
+from evcouplings.utils.config import read_config_file, write_config_file
 import multiprocessing
 
 init()
@@ -23,9 +23,9 @@ bit_scores = []
 global threads
 # finals
 global monomer_config
-monomer_config = "/config/monomer_config_all.txt"
+monomer_config = "/utils/monomer_config_all.txt"
 global complex_config
-complex_config = "/config/complex_config.txt"
+complex_config = "/utils/complex_config.txt"
 global output_dir
 output_dir = "/evcomplex/"  # TODO /evcomplex/
 
@@ -52,20 +52,27 @@ def try_convert(value, t):
 def retry(file, message):
     print(italic(file) + message)
     retry = input("Do you want to retry [" + bold("Y") + "/n]\t")
-    return (retry.lower() != "n") or (retry.lower != "no")
+    return (retry.lower() != "n") and (retry.lower() != "no")
 
 
-def ask(text, retry_message, input_type, default):
+def ask(
+    text: str,
+    retry_message: str,
+    input_type: callable,
+    default: object,
+    check_type: callable = try_convert,
+) -> object:
     user_input = input(text)
     # is default
     if user_input == "":
+        print("\033[F\033[K", end="")
         print("using default value: " + bold(str(default)))
         return default
-    elif try_convert(user_input, input_type):
+    elif check_type(user_input, input_type):
         return input_type(user_input)
     else:
         if retry(user_input, retry_message):
-            ask(text, retry_message, input_type, default)
+            ask(text, retry_message, input_type, default, check_type)
         else:
             print("using default value: " + bold(str(default)))
             return default
@@ -181,15 +188,21 @@ def couplings(infile):
 
 def infile_listener():  # TODO timeout
     def check_file_exists():
-        files = [f for f in os.listdir(output_dir) if re.match(f"^infile.*\.csv$", f)]
+        files = [f for f in os.listdir(output_dir) if re.match(f"^infile.*\\.csv$", f)]
         if files:
             print(f"Using file: {files[0]}")
-            return False  # Or perform any other action when the file is found
-        return True
+            return False, files[0]  # Or perform any other action when the file is found
+        return True, []
 
-    while check_file_exists():
-        print("Please move your infile (infile*.csv) to the volume!", end="\r")
-        time.sleep(10)
+    while check_file_exists()[0]:
+        print("Please move your infile (infile*.csv) to the volume!\t-", end="\r")
+        time.sleep(0.5)
+        print("Please move your infile (infile*.csv) to the volume!\t/", end="\r")
+        time.sleep(0.5)
+        print("Please move your infile (infile*.csv) to the volume!\t-", end="\r")
+        time.sleep(0.5)
+        print("Please move your infile (infile*.csv) to the volume!\t\\", end="\r")
+        time.sleep(0.5)
 
 
 def swim_whale(steps):
@@ -234,7 +247,7 @@ def swim_whale(steps):
             print_whale(top2, bottom2)
         else:
             print_whale(top1, bottom1)
-        time.sleep(0.18)
+        time.sleep(0.2)
         for i in range(6):
             print(
                 "\033[F\033[K", end=""
@@ -282,16 +295,40 @@ def main():
         # adapt monomer config
         config = read_config_file(monomer_config)
         config["environment"]["cores"] = 2
-        write_config_file(config, monomer_config)
+        write_config_file(config, monomer_config)  # TODO
+    # download databases
+    download = ask(
+        "Do you want to "
+        + bold("re-download all databases " + "[" + bold("Y") + "/n]\n"),
+        " is not a valide value. try " + bold("Y") + "/n",
+        lambda x: x,
+        "Y",
+        lambda x, y: type(x) == str and not try_convert(x, float),
+    )
+    if (download.lower() != "no") and (download.lower() != "n"):
+        print("Downloading databases")
+        os.system("bash " + "/utils/download_db.sh")
+    else:
+        print("Reusing existing databases.")
     # wait for infile
-    infile = infile_listener()
+    # infile = infile_listener()
     # 1) Phase
     print("\t**************************************")
     print("\t*                                    *")
     print(f"\t*       {color(color=Fore.GREEN, text='1) Phase aligning')}            *")
     print("\t*                                    *")
     # print("\t**************************************\n")
-    aligning(infile)
+    # aligning(infile)
+    for i in range(5):
+        print("Running\t-", end="\r")
+        time.sleep(0.5)
+        print("Running\t/", end="\r")
+        time.sleep(0.5)
+        print("Running\t-", end="\r")
+        time.sleep(0.5)
+        print("Running\t\\", end="\r")
+        time.sleep(0.5)
+    print("\rFinished.")
     # 2) Phase
     # print("\t**************************************")
     print("\t*                                    *")
@@ -300,7 +337,17 @@ def main():
     )
     print("\t*                                    *")
     # print("\t**************************************\n")
-    couplings(infile)
+    # couplings(infile)
+    for i in range(5):
+        print("Running\t-", end="\r")
+        time.sleep(0.5)
+        print("Running\t/", end="\r")
+        time.sleep(0.5)
+        print("Running\t-", end="\r")
+        time.sleep(0.5)
+        print("Running\t\\", end="\r")
+        time.sleep(0.5)
+    print("\rFinished.")
     # 2) Phase
     # print("\t**************************************")
     print("\t*                                    *")
