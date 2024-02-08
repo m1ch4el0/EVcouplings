@@ -9,7 +9,6 @@ services:
       - USER_INPUT
     stdin_open: true
     tty: true
-    command: --rm
-
-  # docker-compose run -e path/to/input #--rm app
+    
+  # docker-compose run -e path/to/input --rm app
 
