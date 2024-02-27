@@ -643,22 +643,27 @@ def inter_species(**kwargs):
         try:
             conn = sqlite3.connect(db)
             cursor = conn.cursor()
-            # Construct the query
-            query = f"""
-                SELECT 
-                    CASE WHEN species1 IN ({','.join(map(str, species_id_1))}) THEN species1 ELSE species2 END AS entry_1,
-                    CASE WHEN species1 IN ({','.join(map(str, species_id_1))}) THEN species2 ELSE species1 END AS entry_2
+            # Construct the forward query (output a to b)
+            query_forward = f"""
+                SELECT *
                 FROM species_species
                 WHERE (species1 IN ({','.join(map(str, species_id_1))}) AND species2 IN ({','.join(map(str, species_id_2))}))
-                OR (species1 IN ({','.join(map(str, species_id_2))}) AND species2 IN ({','.join(map(str, species_id_1))}))
             """
-            cursor.execute(query)
+            cursor.execute(query_forward)
             connections = cursor.fetchall()
+            # Construct the backward query (output b to a)
+            query_backward = f"""
+                SELECT *
+                FROM species_species
+                WHERE (species1 IN ({','.join(map(str, species_id_2))}) AND species2 IN ({','.join(map(str, species_id_1))}))
+            """
+            cursor.execute(query_backward)
+            connections_backward = cursor.fetchall()
             conn.close()
         except sqlite3.Error as e:
             print("SQLite error:", e)
             return None
-
+        connections.extend(map(lambda x: (x[1], x[0]), connections_backward))
         result = pd.concat(
             [
                 set1.set_index("species")
