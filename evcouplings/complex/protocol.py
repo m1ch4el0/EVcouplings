@@ -688,7 +688,7 @@ def inter_species(**kwargs):
             },
             axis=1,
         )
-        return result
+        return result.drop_duplicates()
 
     # load the information about each monomer alignment
     most_similar_in_species_1 = load_monomer_info(
