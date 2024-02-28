@@ -709,6 +709,10 @@ def inter_species(**kwargs):
         kwargs["paralog_identity_threshold"],
     )
 
+    # TODO quick fix remove/remigrate later
+    most_similar_in_species_1["species"] = most_similar_in_species_1["species"].apply(lambda x: x.split("OX=")[-1])
+    most_similar_in_species_2["species"] = most_similar_in_species_2["species"].apply(lambda x: x.split("OX=")[-1])
+
     # get all id pairs for concatenation defined by species-species file
     species_intersection = _find_concat_pairs(
         most_similar_in_species_1,
