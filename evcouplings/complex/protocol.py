@@ -710,15 +710,18 @@ def inter_species(**kwargs):
     )
 
     # TODO quick fix remove/remigrate later
+    most_similar_in_species_1.to_csv(prefix + "_ms1_tmp.csv", index=False)
     most_similar_in_species_1["species"] = most_similar_in_species_1["species"].apply(lambda x: x.split("OX=")[-1])
     most_similar_in_species_2["species"] = most_similar_in_species_2["species"].apply(lambda x: x.split("OX=")[-1])
-
+    most_similar_in_species_1.to_csv(prefix + "_ms2_tmp.csv", index=False)
+  
     # get all id pairs for concatenation defined by species-species file
     species_intersection = _find_concat_pairs(
         most_similar_in_species_1,
         most_similar_in_species_2,
         kwargs["species_species_file"],
     )
+    species_intersection.to_csv(prefix + "_intersect_tmp.csv", index=False)
 
     # write concatenated alignment with distance filtering
     # TODO: save monomer alignments?
