@@ -8,11 +8,10 @@ from colorama import init, Fore, Style, Back
 import os
 import time
 import re
-import pandas as pd
-import numpy as np
+import sys
 
-from evcouplings.utils.config import read_config_file, write_config_file
-import multiprocessing
+sys.path.insert(0, "/utils")
+from stages import EVStages
 
 init()
 
@@ -30,15 +29,15 @@ global output_dir
 output_dir = "/evcomplex/"  # TODO /evcomplex/
 
 
-def bold(text):
+def bold(text: str) -> str:
     return Style.BRIGHT + text + Style.RESET_ALL
 
 
-def italic(text):
+def italic(text: str) -> str:
     return "\033[3m" + text + Style.RESET_ALL
 
 
-def color(text, color):
+def color(text: str, color: Fore) -> str:
     return color + text + Style.RESET_ALL
 
 
@@ -78,131 +77,31 @@ def ask(
             return default
 
 
-def aligning(
-    infile,
-):
-    def _run_aligning(uid, r_start, r_end):
-        os.system(
-            "evcouplings -p {0} -r {1}-{2} -b {5} --yolo --prefix {3}/{0}_{1}-{2} {4}".format(
-                uid,
-                r_start,
-                r_end,
-                output_dir + "align/",
-                monomer_config,
-                '"' + ",".join(bit_scores) + '"',
-            )
-        )
-        print(
-            "evcouplings -p {0} -r {1}-{2} -b {5} --yolo --prefix {3}/{0}_{1}-{2} monomer_config_all".format(
-                uid,
-                r_start,
-                r_end,
-                output_dir + "align/",
-                monomer_config,
-                '"' + ",".join(bit_scores) + '"',
-            )
-        )
-
-    def check_threads():
-        if threads % 2:
-            return threads / 2
-        return threads
-
-    # get protein info
-    PPIs = pd.read_csv(infile)
-    proteins = pd.concat(
-        PPIs["uid1", "r_start_1", "r_end_1"], PPIs["uid1", "r_start_1", "r_end_1"]
-    ).drop_duplicates()
-    proteins.columns = ["uid", "r_start", "r_end"]
-
-    with multiprocessing.Pool(check_threads) as pool:
-        for _, row in proteins.iterrows():
-            pool.apply(_run_aligning, args=[row.uid, row.r_start, row.r_end])
-
-
-def couplings(infile):
-    def _make_config(row):
-        config = read_config_file(complex_config, preserve_order=True)
-        config["global"]["prefix"] = (
-            "output/couplings/" + f"{row.uid1}__{row.uid2}_{row.bit1}-{row.bit2}"
-        )
-        # TODO rename config with known input
-        # alignment 1
-        config["align_1"]["sequence_id"] = row.uid1
-        config["align_1"]["domain_threshold"] = float(row.bit1)
-        config["align_1"]["sequence_threshold"] = float(row.bit1)
-        config["align_1"]["region"] = [int(row.r_start_1), int(row.r_end_1)]
-        config["align_1"]["first_index"] = int(row.r_start_1)
-        config["align_1"]["input_alignment"] = (
-            "output/align" + f"{row.uid1}_{row.r_start_1}-{row.r_end_1}.a2m"
-        )
-        config["align_1"]["override_annotation_file"] = (
-            "output/align" + f"{row.uid1}_{row.r_start_1}-{row.r_end_1}_annotation.csv"
-        )
-        # alignment 2
-        config["align_2"]["sequence_id"] = row.uid2
-        config["align_2"]["domain_threshold"] = float(row.bit2)
-        config["align_2"]["sequence_threshold"] = float(row.bit2)
-        config["align_2"]["region"] = [int(row.r_start_2), int(row.r_end_2)]
-        config["align_2"]["first_index"] = int(row.r_start_2)
-        config["align_2"]["input_alignment"] = (
-            "output/align" + f"{row.uid2}_{row.r_start_2}-{row.r_end_2}.a2m"
-        )
-        config["align_2"]["override_annotation_file"] = (
-            "output/align" + f"{row.uid2}_{row.r_start_2}-{row.r_end_2}_annotation.csv"
-        )
-        # quick and dirty alignment size calculation
-        if "couplings" in config["stages"]:
-            L = (
-                int(row.r_end_1)
-                - int(row.r_start_1)
-                + int(row.r_end_2)
-                - int(row.r_start_2)
-            )
-            q = 20
-            memory_in_MB = (1 / 2 * q**2 * (L - 1) * L + q * L) / 12500
-            memory_in_MB = max(500, memory_in_MB)
-            config["environment"]["memory"] = int(memory_in_MB)  # maybe remove
-        config["compare"]["plot_model_cutoffs"] = [
-            float(x) for x in config["compare"]["plot_model_cutoffs"]
-        ]
-        return config
-
-    def _run_couplings(config_filename):
-        # run config
-        os.system(f"evcouplings --yolo {config_filename}")
-        print(f"evcouplings {config_filename}")
-
-    PPIs = pd.read_csv(infile)
-
-    with multiprocessing.Pool(threads) as pool:
-        for _, line in PPIs.iterrows():
-            # write config
-            config = _make_config()
-            config_filename = f"output/{line.prefix}.txt"
-            print(config["compare"]["plot_model_cutoffs"])
-            write_config_file(config, config_filename)
-            # run couplings
-            pool.apply(_run_couplings, args=config_filename)
-
-
 def infile_listener():  # TODO timeout
     def check_file_exists():
         files = [f for f in os.listdir(output_dir) if re.match(f"^infile.*\\.csv$", f)]
         if files:
-            print(f"Using file: {files[0]}")
             return False, files[0]  # Or perform any other action when the file is found
         return True, []
 
+    if check_file_exists()[0]:
+        print("Please move your infile (infile*.csv) to the volume!")
+    else:
+        file = check_file_exists()[1]
+        print(f"Using file: {file}")
+        return file
     while check_file_exists()[0]:
-        print("Please move your infile (infile*.csv) to the volume!\t-", end="\r")
+        print("-", end="\r")
         time.sleep(0.5)
-        print("Please move your infile (infile*.csv) to the volume!\t/", end="\r")
+        print("/", end="\r")
         time.sleep(0.5)
-        print("Please move your infile (infile*.csv) to the volume!\t-", end="\r")
+        print("-", end="\r")
         time.sleep(0.5)
-        print("Please move your infile (infile*.csv) to the volume!\t\\", end="\r")
+        print("\\", end="\r")
         time.sleep(0.5)
+    file = check_file_exists()[1]
+    print(f"Using file: {file}")
+    return file
 
 
 def swim_whale(steps):
@@ -283,6 +182,7 @@ def main():
         )
     )
     print("")
+    assert type(bit_scores[0]) == float and len(bit_scores) == 2
     # threads 2 x n?
     threads = ask(
         "please define the " + bold("number of threads [1]") + "\n",
@@ -291,6 +191,7 @@ def main():
         1,
     )
     print("")
+    assert type(threads) == int
     if (threads % 2) == 0:
         # adapt monomer config
         config = read_config_file(monomer_config)
@@ -305,31 +206,51 @@ def main():
         "Y",
         lambda x, y: type(x) == str and not try_convert(x, float),
     )
+    assert type(download) == str
     if (download.lower() != "no") and (download.lower() != "n"):
         print("Downloading databases")
         os.system("bash " + "/utils/download_db.sh")
     else:
-        print("Reusing existing databases.")
-    # wait for infile
-    # infile = infile_listener()
-    # 1) Phase
+        print("Reusing existing databases\n")
+    # wait for infile # TODO change to flag variable
+    infile = infile_listener()
+    print("")
+    assert type(infile) == str
+    # modules # TODO backend
+    modules = ask(
+        "Select which modules to run: "
+        + bold("[1, 3, 5]")
+        + "\n"
+        + bold("1")
+        + "\talign\n"
+        + "2"
+        + "\tconcatenate\tgenome_distance\n"
+        + bold("3")
+        + "\tconcatenate\tbest_hit\n"
+        + "4"
+        + "\tconcatenate\tinter_species\n"
+        + bold("5")
+        + "\tcouplings\n",
+        " is not a valide value. try e.g.: 1, 3, 5",
+        lambda x: [int(v) for v in x.split(",")],
+        [1, 3, 5],
+        lambda x, y: type(x.split(",")) == list
+        and all([try_convert(v, int) for v in x.split(",")]),
+    )
+    print("")
+    assert type(modules) == list and type(modules[0]) == int
+    # Stages
+    stages = EVStages(
+        output_dir, infile, monomer_config, complex_config, bit_scores, threads
+    )
+    # Align
     print("\t**************************************")
     print("\t*                                    *")
     print(f"\t*       {color(color=Fore.GREEN, text='1) Phase aligning')}            *")
     print("\t*                                    *")
     # print("\t**************************************\n")
-    # aligning(infile)
-    for i in range(5):
-        print("Running\t-", end="\r")
-        time.sleep(0.5)
-        print("Running\t/", end="\r")
-        time.sleep(0.5)
-        print("Running\t-", end="\r")
-        time.sleep(0.5)
-        print("Running\t\\", end="\r")
-        time.sleep(0.5)
-    print("\rFinished.")
-    # 2) Phase
+    stages.aligning()
+    # Concat / Coupling
     # print("\t**************************************")
     print("\t*                                    *")
     print(
@@ -337,18 +258,7 @@ def main():
     )
     print("\t*                                    *")
     # print("\t**************************************\n")
-    # couplings(infile)
-    for i in range(5):
-        print("Running\t-", end="\r")
-        time.sleep(0.5)
-        print("Running\t/", end="\r")
-        time.sleep(0.5)
-        print("Running\t-", end="\r")
-        time.sleep(0.5)
-        print("Running\t\\", end="\r")
-        time.sleep(0.5)
-    print("\rFinished.")
-    # 2) Phase
+    stages.couplings()
     # print("\t**************************************")
     print("\t*                                    *")
     print(

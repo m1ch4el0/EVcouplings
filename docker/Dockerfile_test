@@ -1,0 +1,13 @@
+FROM ev:01
+
+# Set environment variable to noninteractive
+# ENV DEBIAN_FRONTEND noninteractive
+# # Install tini
+# RUN apt-get update && apt-get install -y tini
+# run bash script for running python file with input file
+COPY ./scripts/stages.py /utils/
+COPY ./scripts/main_ui.py /utils/
+COPY ./scripts/main_batch.py /utils/
+COPY ./entrypoint.sh /utils/
+RUN chmod +x /utils/entrypoint.sh
+CMD ["/utils/entrypoint.sh"]

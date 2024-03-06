@@ -2,13 +2,18 @@ version: "3.9"
 services:
   app:
     build: .
-    image: ev:01
+    image: ev:001 # TODO change to 01
     volumes:
-      - ${USER_INPUT:-~/Desktop/data}:/evcomplex/
+      - ${OUTPUT_PATH:-~/Desktop/data}:/evcomplex/
+      - ${CONFIG:-./}:/config/custom_config.yaml
+      - ${PPIS:-./}:/config/infile.csv
     environment:
-      - USER_INPUT
+      - OUTPUT_INPUT
+      - CONFIG
+      - PPIS
     stdin_open: true
     tty: true
     
   # docker-compose run -e path/to/input --rm app
+  # docker build ./ -t ev:01 
 

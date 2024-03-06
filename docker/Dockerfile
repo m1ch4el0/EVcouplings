@@ -46,5 +46,6 @@ ENV DEBIAN_FRONTEND noninteractive
 # Install tini
 RUN apt-get update && apt-get install -y tini
 # run bash script for running python file with input file
-COPY ./main.py /utils/
-CMD ["tini", "--", "python", "/utils/main.py"]
+# COPY ./main.py /utils/
+# COPY ./entrypoint.sh /utils/
+# CMD ["/utils/entrypoint.sh"]
