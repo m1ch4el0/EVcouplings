@@ -7,7 +7,7 @@ Script for managing user input for batch service
 from colorama import init, Fore, Style, Back
 import os
 import time
-import re
+from evcouplings.utils.config import read_config_file, write_config_file
 import sys
 
 sys.path.insert(0, "/utils")
@@ -27,6 +27,8 @@ global complex_config
 complex_config = "/utils/complex_config.txt"
 global output_dir
 output_dir = "/evcomplex/"  # TODO /evcomplex/
+global infile
+infile = "/evcomplex/infile.csv"
 
 
 def bold(text: str) -> str:
@@ -39,69 +41,6 @@ def italic(text: str) -> str:
 
 def color(text: str, color: Fore) -> str:
     return color + text + Style.RESET_ALL
-
-
-def try_convert(value, t):
-    try:
-        return t(value) > 0
-    except (ValueError, TypeError):
-        return False
-
-
-def retry(file, message):
-    print(italic(file) + message)
-    retry = input("Do you want to retry [" + bold("Y") + "/n]\t")
-    return (retry.lower() != "n") and (retry.lower() != "no")
-
-
-def ask(
-    text: str,
-    retry_message: str,
-    input_type: callable,
-    default: object,
-    check_type: callable = try_convert,
-) -> object:
-    user_input = input(text)
-    # is default
-    if user_input == "":
-        print("\033[F\033[K", end="")
-        print("using default value: " + bold(str(default)))
-        return default
-    elif check_type(user_input, input_type):
-        return input_type(user_input)
-    else:
-        if retry(user_input, retry_message):
-            ask(text, retry_message, input_type, default, check_type)
-        else:
-            print("using default value: " + bold(str(default)))
-            return default
-
-
-def infile_listener():  # TODO timeout
-    def check_file_exists():
-        files = [f for f in os.listdir(output_dir) if re.match(f"^infile.*\\.csv$", f)]
-        if files:
-            return False, files[0]  # Or perform any other action when the file is found
-        return True, []
-
-    if check_file_exists()[0]:
-        print("Please move your infile (infile*.csv) to the volume!")
-    else:
-        file = check_file_exists()[1]
-        print(f"Using file: {file}")
-        return file
-    while check_file_exists()[0]:
-        print("-", end="\r")
-        time.sleep(0.5)
-        print("/", end="\r")
-        time.sleep(0.5)
-        print("-", end="\r")
-        time.sleep(0.5)
-        print("\\", end="\r")
-        time.sleep(0.5)
-    file = check_file_exists()[1]
-    print(f"Using file: {file}")
-    return file
 
 
 def swim_whale(steps):
@@ -155,6 +94,77 @@ def swim_whale(steps):
     print_whale(top1, bottom1)
 
 
+def try_convert(value, t):
+    try:
+        return t(value) > 0
+    except (ValueError, TypeError):
+        return False
+
+
+def retry(file, message):
+    print(italic(file) + message)
+    retry = input("Do you want to retry [" + bold("Y") + "/n]\t")
+    return (retry.lower() != "n") and (retry.lower() != "no")
+
+
+def ask(
+    text: str,
+    retry_message: str,
+    input_type: callable,
+    default: object,
+    check_type: callable = try_convert,
+) -> object:
+    user_input = input(text)
+    # is default
+    if user_input == "":
+        print("\033[F\033[K", end="")
+        print("using default value: " + bold(str(default)))
+        return default
+    elif check_type(user_input, input_type):
+        return input_type(user_input)
+    else:
+        if retry(user_input, retry_message):
+            ask(text, retry_message, input_type, default, check_type)
+        else:
+            print("using default value: " + bold(str(default)))
+            return default
+
+
+def check_infile() -> None:
+    if not os.path.exists(infile):
+        raise FileNotFoundError(
+            "PPIs file does not exist. Please check your docker-compose command for flag '-e PPIS=<path-to-input>'"
+        )
+
+
+def select_modules(modules: list) -> None:
+    # read configs
+    monomer_dict = read_config_file(monomer_config)
+    complex_dict = read_config_file(complex_config)
+    # modify configs
+    for module in modules:
+        if module == 1:  # align
+            monomer_dict["stages"] = "align"
+        elif module == 2:  # genome distance
+            complex_dict["stages"] = ["align_1", "align_2", "concatenate"]
+            complex_dict["concatenate"]["protocol"] = "genome_distance"
+        elif module == 3:  # best hit
+            complex_dict["stages"] = ["align_1", "align_2", "concatenate"]
+            complex_dict["concatenate"]["protocol"] = "best_hit"
+        elif module == 4:  # inter species
+            complex_dict["stages"] = ["align_1", "align_2", "concatenate"]
+            complex_dict["concatenate"]["protocol"] = "inter_species"
+        elif module == 5:  # couplings
+            complex_dict["stages"] = ["align_1", "align_2", "concatenate", "couplings"]
+        else:
+            monomer_dict["stages"] = ""
+            complex_dict["stages"] = ""
+            raise ValueError("Invalid stage number selected")
+    # write files
+    write_config_file(monomer_config, monomer_dict)
+    write_config_file(complex_config, complex_dict)
+
+
 def main():
     # print welcome to batch service
     print("\t**************************************")
@@ -164,6 +174,8 @@ def main():
     )
     print("\t*                                    *")
     print("\t**************************************\n")
+    # check infile
+    check_infile
     # monomer config file
     bit_scores.append(
         ask(
@@ -212,10 +224,6 @@ def main():
         os.system("bash " + "/utils/download_db.sh")
     else:
         print("Reusing existing databases\n")
-    # wait for infile # TODO change to flag variable
-    infile = infile_listener()
-    print("")
-    assert type(infile) == str
     # modules # TODO backend
     modules = ask(
         "Select which modules to run: "
@@ -239,6 +247,7 @@ def main():
     )
     print("")
     assert type(modules) == list and type(modules[0]) == int
+    select_modules(modules)
     # Stages
     stages = EVStages(
         output_dir, infile, monomer_config, complex_config, bit_scores, threads
@@ -269,4 +278,5 @@ def main():
     swim_whale(31)
 
 
-main()
+if __name__ == "__main__":
+    main()

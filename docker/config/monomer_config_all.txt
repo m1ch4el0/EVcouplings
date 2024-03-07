@@ -17,7 +17,7 @@ batch:
 environment:
   engine: 
   queue: 
-  cores: 1
+  cores: 
   memory:
   time: 
   configuration:
@@ -98,7 +98,7 @@ couplings:
   scale_clusters:
   save_model: true
   reuse_ecs: true
-  cpu: 1
+  cpu: 
   min_sequence_distance: 6 
 
 compare:

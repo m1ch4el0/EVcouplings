@@ -25,10 +25,10 @@ global monomer_config
 monomer_config = "/utils/monomer_config_all.txt"
 global complex_config
 complex_config = "/utils/complex_config.txt"
-global output_dir
-output_dir = "/evcomplex/"  # TODO /evcomplex/
 global custom_config
 custom_config = "/config/custom_config.yaml"
+global output_dir
+output_dir = "/evcomplex/"  # TODO /evcomplex/
 global infile
 infile = "/evcomplex/infile.csv"
 
@@ -43,6 +43,14 @@ def italic(text: str) -> str:
 
 def color(text: str, color: Fore) -> str:
     return color + text + Style.RESET_ALL
+
+
+def check_exists(file: str, file_name: str, flag: str) -> None:
+    if not os.path.exists(file):
+        raise FileNotFoundError(
+            f"{file_name} file does not exist. Please check your docker-compose "
+            + f"command for flag '-e {flag}=<path-to-input>'"
+        )
 
 
 def print_whale() -> None:
@@ -66,6 +74,13 @@ def modify_config(config: dict) -> None:
     # config dictionaries
     monomer_dict = read_config_file(monomer_config)
     complex_dict = read_config_file(complex_config)
+    # stages
+    if "align" in monomer_dict["stages"]:
+        monomer_dict["stages"] = "align"
+    if "couplings" in complex_dict["stages"]:
+        complex_dict["stages"] = ["align_1", "align_2", "concatenate", "couplings"]
+    elif "concatenate" in complex_dict["stages"]:
+        complex_dict["stages"] = ["align_1", "align_2", "concatenate"]
     # align
     for key in monomer_dict["align"].keys():
         monomer_dict["align"][key] = config["align"][key]
@@ -88,22 +103,25 @@ def main():
     print("\t**************************************")
     print("\t*                                    *")
     print(
-        f"\t*       {color(color=Fore.MAGENTA, text='EVcomplex batch service')}        *"
+        f"\t*       {color(color=Fore.MAGENTA, text='EVcomplex batch service')}       *"
     )
     print("\t*                                    *")
     print("\t**************************************\n")
-    # Adapting config # TODO create custom config template
+    # check for infile
+    check_exists(infile, "PPI input", "PPIS")
+    # check for custom config
+    check_exists(custom_config, "Config", "CONFIG")
+    # Adapting config
     config = read_config_file(custom_config)
     modify_config(config)
     # Download databases
-    if config["utils"]["download"]:
+    if config["utils"]["download_db"]:
         print("Downloading databases")
         os.system("bash " + "/utils/download_db.sh")
     else:
         print("Reusing existing databases\n")
     # Bit scores
-    bit_scores.append(config["align"]["domain_threshold"])
-    bit_scores.append(config["align"]["domain_threshold"])
+    bit_scores = config["utils"]["bit_scores"]
     # Threads
     threads = config["utils"]["threads"]
     # Stages
@@ -136,4 +154,5 @@ def main():
     print_whale()
 
 
-main()
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,124 @@
+# Configuration rules:
+# 1) Global settings override settings for stages
+# 2) Outputs of a stage are merged into "global" and fed into input of subsequent stages
+# 3) All settings are explicitly specified here. No hidden defaults in code.
+# 4) Each stage is also passed the databases and tools sections
+
+
+# Define here global parameters for the hole batch job 
+utils:
+# total number of cores 
+  threads: 2
+# Fresh download of all databases
+  download_db: false
+# Bit scores for aligning phase
+  bit_scores:
+  - 0.2
+  - 0.5
+
+stages:
+- align
+- concatenate
+- couplings
+
+
+global:
+  sequence_id: 
+  sequence_file:
+  region:
+  - 1
+  - 291
+  cpu: 
+  prefix: /evcomplex/
+
+align:
+  protocol: standard
+  prefix:
+  sequence_id:
+  sequence_file:
+  region:
+  first_index: 1 
+
+  use_bitscores: true
+  domain_threshold: 0.5
+  sequence_threshold: 0.5
+  iterations: 5
+  database: uniprot
+
+  compute_num_effective_seqs: false
+  theta: 0.8
+
+  seqid_filter:
+  minimum_sequence_coverage: 50
+  minimum_column_coverage: 50
+
+  extract_annotation: true
+  cpu:
+  nobias: false
+  reuse_alignment: true
+  checkpoints_hmm: false
+  checkpoints_ali: false
+
+concatenate:
+  first_alignment_file:
+  second_alignment_file:
+
+  protocol: best_hit
+  use_best_reciprocal: true
+  paralog_identity_threshold: 0.9
+
+    #maximum genome distance in bases allowed between pairs
+    #required for genome_distance protocol only
+  genome_distance_threshold: 1000
+
+  seqid_filter:
+  minimum_sequence_coverage: 50
+  minimum_column_coverage: 50
+
+  compute_num_effective_seqs: false
+  theta: 0.8
+
+  forbid_overlapping_concatenation: true
+
+# alternative protocol: reuse existing alignment
+#    protocol: existing
+#    prefix: ./existing/existing_bpt1
+#    # alignment needs to contain region in form SEQID/start-end, or first_index must be set
+#    input_alignment: ./infer/PF00014_full.txt
+#    sequence_id: BPT1_BOVIN
+#    first_index:
+#    compute_num_effective_seqs: False
+#    theta: 0.8
+#    seqid_filter:
+#    minimum_sequence_coverage: 50
+#    minimum_column_coverage: 70
+#    extract_annotation: True
+
+couplings:
+  protocol: complex
+
+  prefix:
+  alignment_file:
+  focus_sequence:
+  focus_mode: true
+  segments:
+
+  theta: 0.8
+  iterations: 100
+  alphabet:
+  ignore_gaps: true
+  lambda_J: 0.01
+  lambda_J_times_Lq: true
+  lambda_h: 0.01
+  lambda_group:
+  scale_clusters:
+  save_model: true
+  reuse_ecs: false
+  cpu: 
+
+  min_sequence_distance: 6
+  scoring_model: skewnormal
+  use_all_ecs_for_scoring: false
+
+management:
+  delete: [raw_alignment_file]

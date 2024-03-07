@@ -26,9 +26,17 @@ class EVStages:
         self.bit_scores = bit_scores
         self.threads = threads
 
+    def __check_threads(self, config_path: str) -> int:
+        if self.threads % 2 == 0:
+            config = read_config_file(config_path)
+            config["global"]["cpu"] = 2
+            write_config_file(config, config_path)
+            return self.threads / 2
+        return self.threads
+
     def aligning(self) -> None:
-        def _run_aligning(uid, r_start, r_end):
-            os.system(  # TODO check option for threads
+        def _run_aligning(uid: str, r_start: int, r_end: int) -> None:
+            os.system(
                 "evcouplings -p {0} -r {1}-{2} -b {5} --yolo --prefix {3}/{0}_{1}-{2} {4}".format(
                     uid,
                     r_start,
@@ -49,11 +57,6 @@ class EVStages:
                 )
             )
 
-        def check_threads():
-            if self.threads % 2:
-                return self.threads / 2
-            return self.threads
-
         # get protein info
         PPIs = pd.read_csv(self.infile)
         proteins = pd.concat(
@@ -61,12 +64,12 @@ class EVStages:
         ).drop_duplicates()
         proteins.columns = ["uid", "r_start", "r_end"]
 
-        with multiprocessing.Pool(check_threads) as pool:
+        with multiprocessing.Pool(self.__check_threads(self.monomer_config)) as pool:
             for _, row in proteins.iterrows():
                 pool.apply_async(_run_aligning, args=[row.uid, row.r_start, row.r_end])
 
     def couplings(self) -> None:
-        def _make_config(row):
+        def _make_config(row: pd.Series) -> dict:
             config = read_config_file(self.complex_config, preserve_order=True)
             config["global"]["prefix"] = (
                 "output/couplings/" + f"{row.uid1}__{row.uid2}_{row.bit1}-{row.bit2}"
@@ -110,24 +113,24 @@ class EVStages:
                 memory_in_MB = (1 / 2 * q**2 * (L - 1) * L + q * L) / 12500
                 memory_in_MB = max(500, memory_in_MB)
                 config["environment"]["memory"] = int(memory_in_MB)  # maybe remove
-            config["compare"]["plot_model_cutoffs"] = [
-                float(x) for x in config["compare"]["plot_model_cutoffs"]
-            ]
+            # config["compare"]["plot_model_cutoffs"] = [
+            #     float(x) for x in config["compare"]["plot_model_cutoffs"]
+            # ]
             return config
 
-        def _run_couplings(config_filename):
+        def _run_couplings(config_filename: str) -> None:
             # run config
             os.system(f"evcouplings --yolo {config_filename}")
-            print(f"evcouplings {config_filename}")
+            print(f"finished {config_filename}")
 
         PPIs = pd.read_csv(self.infile)
 
-        with multiprocessing.Pool(self.threads) as pool:
+        with multiprocessing.Pool(self.__check_threads(self.complex_config)) as pool:
             for _, line in PPIs.iterrows():
                 # write config
                 config = _make_config()
                 config_filename = f"output/{line.prefix}.txt"
-                print(config["compare"]["plot_model_cutoffs"])
+                # print(config["compare"]["plot_model_cutoffs"])
                 write_config_file(config, config_filename)
                 # run couplings
                 pool.apply_async(_run_couplings, args=config_filename)

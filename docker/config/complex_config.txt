@@ -7,7 +7,7 @@ stages:
 #- compare
 
 global:
-  cpu:
+  cpu: 1
   prefix: output/
   theta: 0.8
 
@@ -119,7 +119,7 @@ couplings:
   scale_clusters:
   save_model: true
   reuse_ecs: false
-  cpu: 1
+  cpu: 
 
   min_sequence_distance: 6
   scoring_model: skewnormal
@@ -241,7 +241,7 @@ environment:
     # Note that "cores" will override the "cpu" parameter for "global"
   engine: 
   queue: 
-  cores: 1
+  cores: 
   memory: 
   time:
   configuration:

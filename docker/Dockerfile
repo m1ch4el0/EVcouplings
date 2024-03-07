@@ -30,13 +30,9 @@ RUN make
 RUN make check
 RUN make install
 
-# Databases TODO clean up
-COPY ./config/download_db.sh /utils/
-WORKDIR /DB/
-RUN wget https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz
-RUN gunzip uniprot_sprot.fasta.gz
-RUN wget https://marks.hms.harvard.edu/evcomplex_databases/cds_pro_2017_02.txt
-RUN wget https://marks.hms.harvard.edu/evcomplex_databases/idmapping_uniprot_embl_2017_02.txt 
+# Databases 
+COPY ./scripts/download_db.sh /utils/
+RUN bash /utils/download_db.sh
 # Config files
 COPY ./config/complex_config.txt /utils/
 COPY ./config/monomer_config_all.txt /utils/
@@ -49,3 +45,4 @@ RUN apt-get update && apt-get install -y tini
 # COPY ./main.py /utils/
 # COPY ./entrypoint.sh /utils/
 # CMD ["/utils/entrypoint.sh"]
+ 
