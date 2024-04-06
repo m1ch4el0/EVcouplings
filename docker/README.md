@@ -1,5 +1,10 @@
 # EVcomplex (dockerized)
-The folder *docker* containerizes *EVcomplex*.
+The folder *docker* containerizes *EVcomplex*. The following stages and protocols are available:
+
+- align
+- genome_distance | best_hit | (inter_species)
+    - concatenate
+    - couplings
 
 ## Building the first image
 The docker image can be built using the Dockerfile
