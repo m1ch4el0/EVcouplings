@@ -1,0 +1,2 @@
+prefix,uid1,bit1,r_start_1,r_end_1,aln1,uid2,bit2,r_start_2,r_end_2,aln2
+ATPA_HUMAN__ATPB_HUMAN,ATPA_HUMAN,<bit score of alignemnt>,1,553,/evcomplex/align/<path-to-file>,ATPB_HUMAN,<bit score of alignemnt>,1,529,/evcomplex/align/<path-to-file>

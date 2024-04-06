@@ -10,7 +10,7 @@ import time
 from evcouplings.utils.config import read_config_file, write_config_file
 import sys
 
-sys.path.insert(0, "/utils")
+sys.path.insert(0, "/home/utils")
 from stages import EVStages
 
 init()
@@ -22,13 +22,13 @@ bit_scores = []
 global threads
 # finals
 global monomer_config
-monomer_config = "/utils/monomer_config_all.txt"
+monomer_config = "/home/utils/monomer_config_all.txt"
 global complex_config
-complex_config = "/utils/complex_config.txt"
+complex_config = "/home/utils/complex_config.txt"
 global custom_config
 custom_config = "/config/custom_config.yaml"
 global output_dir
-output_dir = "/evcomplex/"  # TODO /evcomplex/
+output_dir = "/evcomplex/"
 global infile
 infile = "/evcomplex/infile.csv"
 
@@ -76,7 +76,7 @@ def modify_config(config: dict) -> None:
     complex_dict = read_config_file(complex_config)
     # stages
     if "align" in monomer_dict["stages"]:
-        monomer_dict["stages"] = "align"
+        monomer_dict["stages"] = ["align"]
     if "couplings" in complex_dict["stages"]:
         complex_dict["stages"] = ["align_1", "align_2", "concatenate", "couplings"]
     elif "concatenate" in complex_dict["stages"]:
@@ -84,7 +84,7 @@ def modify_config(config: dict) -> None:
     # align
     for key in monomer_dict["align"].keys():
         monomer_dict["align"][key] = config["align"][key]
-        if key != "reuse_alignment":
+        if key != "reuse_alignment" and key != "protocol":
             complex_dict["align_1"][key] = config["align"][key]
             complex_dict["align_2"][key] = config["align"][key]
     # concatenate
@@ -103,7 +103,7 @@ def main():
     print("\t**************************************")
     print("\t*                                    *")
     print(
-        f"\t*       {color(color=Fore.MAGENTA, text='EVcomplex batch service')}       *"
+        f"\t*       {color(color=Fore.MAGENTA, text='EVcomplex batch service')}      *"
     )
     print("\t*                                    *")
     print("\t**************************************\n")
@@ -133,18 +133,15 @@ def main():
     print("\t*                                    *")
     print(f"\t*       {color(color=Fore.GREEN, text='1) Stage aligning')}            *")
     print("\t*                                    *")
-    # print("\t**************************************\n")
-    stages.aligning()
-    # Concat / Coupling
-    # print("\t**************************************")
+    if "align" in config["stages"]:
+        stages.aligning()
     print("\t*                                    *")
     print(
         f"\t*       {color(color=Fore.YELLOW, text='2) Stage couplings')}           *"
     )
     print("\t*                                    *")
-    # print("\t**************************************\n")
-    stages.couplings()
-    # print("\t**************************************")
+    if "concatenate" in config["stages"] or "couplings" in config["stages"]:
+        stages.couplings()
     print("\t*                                    *")
     print(
         f"\t*       {color(color=Fore.MAGENTA, text='Computations finished')}        *"

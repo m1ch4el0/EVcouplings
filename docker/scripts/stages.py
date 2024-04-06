@@ -6,7 +6,21 @@ import pandas as pd
 import numpy as np
 import os
 from evcouplings.utils.config import read_config_file, write_config_file
+from evcouplings.utils.pipeline import execute
 import multiprocessing
+
+
+def run_aligning(
+    monomer_config: dict,
+) -> None:
+    config = read_config_file(monomer_config, preserve_order=True)
+    execute(**config)
+
+
+def run_couplings(config_filename: str) -> None:
+    # run config
+    config = read_config_file(config_filename, preserve_order=True)
+    execute(**config)
 
 
 class EVStages:
@@ -22,57 +36,96 @@ class EVStages:
         self.infile = infile
         self.output_dir = output_dir
         self.monomer_config = monomer_config
-        self.complex_config = monomer_config
+        self.complex_config = complex_config
         self.bit_scores = bit_scores
         self.threads = threads
 
-    def __check_threads(self, config_path: str) -> int:
-        if self.threads % 2 == 0:
-            config = read_config_file(config_path)
-            config["global"]["cpu"] = 2
-            write_config_file(config, config_path)
-            return self.threads / 2
-        return self.threads
-
     def aligning(self) -> None:
-        def _run_aligning(uid: str, r_start: int, r_end: int) -> None:
-            os.system(
-                "evcouplings -p {0} -r {1}-{2} -b {5} --yolo --prefix {3}/{0}_{1}-{2} {4}".format(
-                    uid,
-                    r_start,
-                    r_end,
-                    self.output_dir + "align/",
-                    self.monomer_config,
-                    '"' + ",".join(self.bit_scores) + '"',
-                )
-            )
-            print(
-                "evcouplings -p {0} -r {1}-{2} -b {5} --yolo --prefix {3}/{0}_{1}-{2} monomer_config_all".format(
-                    uid,
-                    r_start,
-                    r_end,
-                    self.output_dir + "align/",
-                    self.monomer_config,
-                    '"' + ",".join(self.bit_scores) + '"',
-                )
-            )
-
         # get protein info
         PPIs = pd.read_csv(self.infile)
+        # rename second PPIs for concat
+        PPIs_tmp = PPIs[["uid2", "r_start_2", "r_end_2"]]
+        PPIs_tmp.columns = ["uid1", "r_start_1", "r_end_1"]
         proteins = pd.concat(
-            PPIs["uid1", "r_start_1", "r_end_1"], PPIs["uid1", "r_start_1", "r_end_1"]
+            [PPIs[["uid1", "r_start_1", "r_end_1"]], PPIs_tmp]
         ).drop_duplicates()
         proteins.columns = ["uid", "r_start", "r_end"]
+        # check output dir
+        if not os.path.exists("/evcomplex/align"):
+            os.makedirs("/evcomplex/align")
 
-        with multiprocessing.Pool(self.__check_threads(self.monomer_config)) as pool:
+        with multiprocessing.Pool(self.threads) as pool:
             for _, row in proteins.iterrows():
-                pool.apply_async(_run_aligning, args=[row.uid, row.r_start, row.r_end])
+                for bit in self.bit_scores:
+                    # writing single config file
+                    config = read_config_file(self.monomer_config, preserve_order=True)
+                    config["stages"] = ["align"]
+                    config["global"]["sequence_id"] = row.uid
+                    config["global"]["region"] = [row.r_start, row.r_end]
+                    config["global"]["prefix"] = "{3}/{0}_{1}-{2}_b{4}".format(
+                        row.uid, row.r_start, row.r_end, self.output_dir + "align", bit
+                    )
+                    config["align"]["domain_threshold"] = bit
+                    config["align"]["sequence_threshold"] = bit
+                    config["align"]["reuse_alignment"] = False
+                    config_file = f"{self.output_dir}align/{row.uid}_b{bit}.txt"
+                    write_config_file(config_file, config)
+                    # submitting alignment
+                    # execute(**config)
+                    pool.apply(
+                        run_aligning,
+                        args=[config_file],
+                    )
 
     def couplings(self) -> None:
+        def _fill_missing_information_infile(PPIs: pd.DataFrame) -> pd.DataFrame:
+            use = []
+            values = []
+            # for each protein pair
+            for _, line in PPIs.iterrows():
+                line_values = []
+                for alignment in [1, 2]:
+                    # alignment file
+                    file = f'{line[f"uid{alignment}"]}_{line[f"r_start_{alignment}"]}-{line[f"r_end_{alignment}"]}_'
+                    # for each bit score
+                    for bit in self.bit_scores:
+                        dir = (
+                            self.output_dir
+                            + "align/"
+                            + file
+                            + f"b{bit}"
+                            + "/align/"
+                            + file
+                            + f"b{bit}"
+                            + ".a2m"
+                        )
+                        if os.path.isfile(dir):
+                            line_values.append(bit)
+                            line_values.append(dir)
+                            break
+                # check if any alignments are missing
+                if len(line_values) == 4:
+                    use.append(True)
+                    values.append(line_values)
+                else:
+                    use.append(False)
+                    print(f'Alignments {line["uid1"]}, {line["uid2"]} failed')
+            PPIs = PPIs[use]
+            # fill columns
+            PPIs["bit1"] = list(map(lambda x: x[0], values))
+            PPIs["aln1"] = list(map(lambda x: x[1], values))
+            PPIs["bit2"] = list(map(lambda x: x[2], values))
+            PPIs["aln2"] = list(map(lambda x: x[3], values))
+            # save additional information
+            PPIs.to_csv(self.infile.replace(".csv", "_used.csv"))
+            return PPIs
+
         def _make_config(row: pd.Series) -> dict:
             config = read_config_file(self.complex_config, preserve_order=True)
             config["global"]["prefix"] = (
-                "output/couplings/" + f"{row.uid1}__{row.uid2}_{row.bit1}-{row.bit2}"
+                self.output_dir
+                + "couplings/"
+                + f"{row.uid1}__{row.uid2}_{row.bit1}-{row.bit2}"
             )
             # TODO rename config with known input
             # alignment 1
@@ -81,12 +134,9 @@ class EVStages:
             config["align_1"]["sequence_threshold"] = float(row.bit1)
             config["align_1"]["region"] = [int(row.r_start_1), int(row.r_end_1)]
             config["align_1"]["first_index"] = int(row.r_start_1)
-            config["align_1"]["input_alignment"] = (
-                "output/align" + f"{row.uid1}_{row.r_start_1}-{row.r_end_1}.a2m"
-            )
-            config["align_1"]["override_annotation_file"] = (
-                "output/align"
-                + f"{row.uid1}_{row.r_start_1}-{row.r_end_1}_annotation.csv"
+            config["align_1"]["input_alignment"] = row.aln1
+            config["align_1"]["override_annotation_file"] = row.aln1.replace(
+                ".a2m", "_annotation.csv"
             )
             # alignment 2
             config["align_2"]["sequence_id"] = row.uid2
@@ -94,12 +144,9 @@ class EVStages:
             config["align_2"]["sequence_threshold"] = float(row.bit2)
             config["align_2"]["region"] = [int(row.r_start_2), int(row.r_end_2)]
             config["align_2"]["first_index"] = int(row.r_start_2)
-            config["align_2"]["input_alignment"] = (
-                "output/align" + f"{row.uid2}_{row.r_start_2}-{row.r_end_2}.a2m"
-            )
-            config["align_2"]["override_annotation_file"] = (
-                "output/align"
-                + f"{row.uid2}_{row.r_start_2}-{row.r_end_2}_annotation.csv"
+            config["align_2"]["input_alignment"] = row.aln2
+            config["align_2"]["override_annotation_file"] = row.aln2.replace(
+                ".a2m", "_annotation.csv"
             )
             # quick and dirty alignment size calculation
             if "couplings" in config["stages"]:
@@ -118,19 +165,21 @@ class EVStages:
             # ]
             return config
 
-        def _run_couplings(config_filename: str) -> None:
-            # run config
-            os.system(f"evcouplings --yolo {config_filename}")
-            print(f"finished {config_filename}")
-
         PPIs = pd.read_csv(self.infile)
 
-        with multiprocessing.Pool(self.__check_threads(self.complex_config)) as pool:
+        # fill infile details
+        if not (os.path.exists(PPIs["aln1"][0]) and os.path.exists(PPIs["aln2"][0])):
+            PPIs = _fill_missing_information_infile(PPIs)
+        # check for output path
+        if not os.path.exists("/evcomplex/couplings"):
+            os.makedirs("/evcomplex/couplings")
+
+        with multiprocessing.Pool(self.threads) as pool:
             for _, line in PPIs.iterrows():
                 # write config
-                config = _make_config()
-                config_filename = f"output/{line.prefix}.txt"
+                config = _make_config(line)
+                config_filename = self.output_dir + f"couplings/{line.prefix}.txt"
                 # print(config["compare"]["plot_model_cutoffs"])
-                write_config_file(config, config_filename)
+                write_config_file(config_filename, config)
                 # run couplings
-                pool.apply_async(_run_couplings, args=config_filename)
+                pool.apply(run_couplings, args=[config_filename])

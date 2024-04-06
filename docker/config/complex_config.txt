@@ -210,7 +210,7 @@ compare:
   draw_secondary_structure: true
 
 databases:
-  uniprot: /n/groups/marks/databases/jackhmmer/uniprot/uniprot_2023_6.fasta
+  uniprot: /home/DB/uniprot_sprot.fasta
   uniref100: /n/groups/marks/databases/jackhmmer/uniref100/uniref100_2023_6.fasta
   uniref90: /n/groups/marks/databases/jackhmmer/uniref90/uniref90_2023_6.fasta
   pdb_seqres: /n/groups/marks/databases/pdb_2019_11_26/pdb_seqres.txt
@@ -218,15 +218,15 @@ databases:
   pdb_mmtf_dir:
   sifts_mapping_table: /n/groups/marks/databases/SIFTS/pdb_chain_uniprot_plus_2023_6_9.csv
   sifts_sequence_db: /n/groups/marks/databases/SIFTS/pdb_chain_uniprot_plus_2023_6_9.fasta
-  uniprot_to_embl_table: /n/groups/marks/databases/complexes/idmapping/idmapping_uniprot_embl_2020_08.txt
-  ena_genome_location_table: /n/groups/marks/databases/complexes/ena/2020_08/cds_pro.txt
+  uniprot_to_embl_table: /home/DB/idmapping_uniprot_embl_2017_02.txt
+  ena_genome_location_table: /home/DB/cds_pro_2017_02.txt
 
 tools:
-  jackhmmer: /n/groups/marks/pipelines/evcouplings/software/hmmer-3.1b2-linux-intel-x86_64/binaries/jackhmmer
-  hmmbuild: /n/groups/marks/pipelines/evcouplings/software/hmmer-3.1b2-linux-intel-x86_64/binaries/hmmbuild
-  hmmsearch: /n/groups/marks/pipelines/evcouplings/software/hmmer-3.1b2-linux-intel-x86_64/binaries/hmmsearch
+  jackhmmer: /home/hmmer-3.4/src/jackhmmer
+  hmmbuild: /home/hmmer-3.4/src/hmmbuild
+  hmmsearch: /home/hmmer-3.4/src/hmmsearch
   hhfilter: /n/groups/marks/pipelines/evcouplings/software/hh-suite/bin/hhfilter
-  plmc: /n/groups/marks/pipelines/evcouplings/software/plmc/bin/plmc
+  plmc: /home/plmc/plmc-master/bin/plmc
   psipred: /n/groups/marks/software/runpsipred
   cns: /n/groups/marks/pipelines/evcouplings/software/cns_solve_1.21/intel-x86_64bit-linux/bin/cns
   maxcluster: /n/groups/marks/pipelines/evcouplings/software/maxcluster64bit

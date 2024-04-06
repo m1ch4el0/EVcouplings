@@ -10,7 +10,7 @@ import time
 from evcouplings.utils.config import read_config_file, write_config_file
 import sys
 
-sys.path.insert(0, "/utils")
+sys.path.insert(0, "/home/utils")
 from stages import EVStages
 
 init()
@@ -22,9 +22,9 @@ bit_scores = []
 global threads
 # finals
 global monomer_config
-monomer_config = "/utils/monomer_config_all.txt"
+monomer_config = "/home/utils/monomer_config_all.txt"
 global complex_config
-complex_config = "/utils/complex_config.txt"
+complex_config = "/home/utils/complex_config.txt"
 global output_dir
 output_dir = "/evcomplex/"  # TODO /evcomplex/
 global infile
@@ -43,8 +43,8 @@ def color(text: str, color: Fore) -> str:
     return color + text + Style.RESET_ALL
 
 
-def swim_whale(steps):
-    def print_whale(top, bottom):
+def swim_whale(steps: int) -> None:
+    def print_whale(top: str, bottom: str) -> None:
         for line in top:
             print(" " * step + str(line))
         for line in bottom:
@@ -94,14 +94,14 @@ def swim_whale(steps):
     print_whale(top1, bottom1)
 
 
-def try_convert(value, t):
+def try_convert(value: object, t: function) -> bool:
     try:
         return t(value) > 0
     except (ValueError, TypeError):
         return False
 
 
-def retry(file, message):
+def retry(file: str, message: str) -> bool:
     print(italic(file) + message)
     retry = input("Do you want to retry [" + bold("Y") + "/n]\t")
     return (retry.lower() != "n") and (retry.lower() != "no")
@@ -144,7 +144,7 @@ def select_modules(modules: list) -> None:
     # modify configs
     for module in modules:
         if module == 1:  # align
-            monomer_dict["stages"] = "align"
+            monomer_dict["stages"] = ["align"]
         elif module == 2:  # genome distance
             complex_dict["stages"] = ["align_1", "align_2", "concatenate"]
             complex_dict["concatenate"]["protocol"] = "genome_distance"
@@ -157,8 +157,8 @@ def select_modules(modules: list) -> None:
         elif module == 5:  # couplings
             complex_dict["stages"] = ["align_1", "align_2", "concatenate", "couplings"]
         else:
-            monomer_dict["stages"] = ""
-            complex_dict["stages"] = ""
+            monomer_dict["stages"] = []
+            complex_dict["stages"] = []
             raise ValueError("Invalid stage number selected")
     # write files
     write_config_file(monomer_config, monomer_dict)
@@ -224,7 +224,7 @@ def main():
         os.system("bash " + "/utils/download_db.sh")
     else:
         print("Reusing existing databases\n")
-    # modules # TODO backend
+    # modules
     modules = ask(
         "Select which modules to run: "
         + bold("[1, 3, 5]")
@@ -257,18 +257,15 @@ def main():
     print("\t*                                    *")
     print(f"\t*       {color(color=Fore.GREEN, text='1) Phase aligning')}            *")
     print("\t*                                    *")
-    # print("\t**************************************\n")
-    stages.aligning()
-    # Concat / Coupling
-    # print("\t**************************************")
+    if 1 in modules:
+        stages.aligning()
     print("\t*                                    *")
     print(
         f"\t*       {color(color=Fore.YELLOW, text='2) Phase couplings')}           *"
     )
     print("\t*                                    *")
-    # print("\t**************************************\n")
-    stages.couplings()
-    # print("\t**************************************")
+    if any([i in modules for i in [2, 3, 4, 5]]):
+        stages.couplings()
     print("\t*                                    *")
     print(
         f"\t*       {color(color=Fore.MAGENTA, text='Computations finished')}        *"

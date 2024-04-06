@@ -3,13 +3,14 @@ services:
   app:
     build: .
     # Please specify image 'image: <image>:<tag>'
-    image: ev:001 # TODO change to 01
+    image: ev:01
     volumes:
       # Please specify output paths '- <local-path-to-output-dir>:/evcomplex/'
-      - ~/Desktop/data:/evcomplex/ TODO remove default
+      - ~/Desktop/docker_example:/evcomplex/ # TODO remove default
       # (Optional) Please specify config paths '- <local-path-to-config>:/config/custom_config.yaml'
+      - ~/Desktop/docker_example/custom_config_docker.yaml:/config/custom_config.yaml
       # Please specify PPI path '<local-path-to-PPI>:/evcomplex/infile.csv'
-      - ~/Desktop/data/infile_test_empty.csv:/evcomplex/infile.csv 
+      - ~/Desktop/docker_example/infile_example.csv:/evcomplex/infile.csv 
     stdin_open: true
     tty: true
     
