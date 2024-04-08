@@ -26,7 +26,7 @@ monomer_config = "/home/utils/monomer_config_all.txt"
 global complex_config
 complex_config = "/home/utils/complex_config.txt"
 global custom_config
-custom_config = "/config/custom_config.yaml"
+custom_config = "/home/config/custom_config.yaml"
 global output_dir
 output_dir = "/evcomplex/"
 global infile

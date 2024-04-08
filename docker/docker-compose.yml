@@ -5,13 +5,14 @@ services:
     # Please specify image 'image: <image>:<tag>'
     image: ev:01
     volumes:
-      # Please specify output paths '- <local-path-to-output-dir>:/evcomplex/'
-      - ~/Desktop/docker_example:/evcomplex/ # TODO remove default
-      # (Optional) Please specify config paths '- <local-path-to-config>:/config/custom_config.yaml'
-      - ~/Desktop/docker_example/custom_config_docker.yaml:/config/custom_config.yaml
-      # Please specify PPI path '<local-path-to-PPI>:/evcomplex/infile.csv'
+      # Please specify output paths '- <local-output-directory>:/evcomplex/'
+      - ~/Desktop/docker_example:/evcomplex/
+      # Please specify PPI path '<local-path-to-PPIs>:/evcomplex/infile.csv'
       - ~/Desktop/docker_example/infile_example.csv:/evcomplex/infile.csv 
+      # (Optional) Please specify config paths '- <local-path-to-config>:/config/custom_config.yaml'
+      - ~/Desktop/docker_example/custom_config_docker.yml:/config/custom_config.yaml
     stdin_open: true
     tty: true
     
 # Run via: 'docker-compose run --rm app'
+# Build image: 'docker build -t ev:<tag> -f Dockerfile'
