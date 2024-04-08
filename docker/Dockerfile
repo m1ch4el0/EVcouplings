@@ -4,7 +4,7 @@ FROM mcr.microsoft.com/devcontainers/miniconda:0-3
 ENV DEBIAN_FRONTEND noninteractive
 
 # Copy the environment.yml file to the /tmp/conda-tmp directory in the image
-COPY ./environment.yml /tmp/conda-tmp/
+COPY ./config/environment.yml /tmp/conda-tmp/
 # Run the command to update the Conda environment
 RUN if [ -f "/tmp/conda-tmp/environment.yml" ]; then /opt/conda/bin/conda env update -n base -f /tmp/conda-tmp/environment.yml; fi \
     && rm -rf /tmp/conda-tmp
@@ -57,7 +57,7 @@ COPY ./scripts/main_batch.py /home/utils/
 RUN chmod +rwx /home/utils/main_batch.py
 COPY ./scripts/stages.py /home/utils/
 RUN chmod +rwx /home/utils/stages.py
-COPY ./entrypoint.sh /home/utils/
+COPY ./scripts/entrypoint.sh /home/utils/
 RUN chmod +x /home/utils/entrypoint.sh
 # running service entrypoint
 CMD ["/home/utils/entrypoint.sh"]
