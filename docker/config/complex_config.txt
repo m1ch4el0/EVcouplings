@@ -84,6 +84,7 @@ concatenate:
 
   protocol: best_hit
   use_best_reciprocal: true
+  species_species_file: /home/DB/db_2024_04_28.db
   paralog_identity_threshold: 0.9
 
     #maximum genome distance in bases allowed between pairs
